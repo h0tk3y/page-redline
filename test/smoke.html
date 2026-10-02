@@ -1,0 +1,113 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Smoke</title>
+<link rel="stylesheet" href="../content.css">
+<script>
+  // Stub the extension API so content.js runs in a plain page.
+  (function () {
+    const store = {};
+    const listeners = [];
+    window.__store = store;
+    window.chrome = {
+      storage: {
+        local: {
+          get: async (k) => ({ [k]: store[k] }),
+          set: async (obj) => { Object.assign(store, JSON.parse(JSON.stringify(obj))); },
+        },
+        onChanged: { addListener() {} },
+      },
+      runtime: { onMessage: { addListener: (fn) => listeners.push(fn) } },
+    };
+    window.__send = (msg) => new Promise((resolve) => listeners.at(-1)(msg, {}, resolve));
+  })();
+</script>
+</head>
+<body>
+<article id="a">
+  <h2>Heading one</h2>
+  <p id="p1">The quick <b>brown fox</b> jumps over the lazy dog. The quick brown fox again.</p>
+  <p id="p2">Second paragraph with <a href="#x">a link inside</a> and more words after it.</p>
+</article>
+<pre id="out"></pre>
+<script>
+  const __src = (() => { const x = new XMLHttpRequest(); x.open('GET', '../content.js', false); x.send(); return x.responseText; })();
+  const __run = () => (0, eval)(__src);
+  __run();
+</script>
+<script>
+(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push(`${cond ? 'PASS' : 'FAIL'} ${name}`);
+  const text = () => document.getElementById('a').textContent.replace(/\s+/g, ' ').trim();
+  const sel = (sn, so, en, eo) => { const r = document.createRange(); r.setStart(sn, so); r.setEnd(en, eo); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+  const before = text();
+
+  // 1. selection spanning an inline element: "quick brown fox jumps"
+  const p1 = document.getElementById('p1');
+  sel(p1.firstChild, 4, p1.childNodes[2], 6); // "quick " + "brown fox" + " jumps"
+  let r = await __send({ type: 'pr:mark-selection' });
+  ok('mark spanning <b> ok', r.ok && r.edit.exact === 'quick brown fox jumps');
+  ok('three del spans', document.querySelectorAll('.page-redline-del').length === 3);
+  ok('page text unchanged by marking', text() === before);
+
+  // 2. set replacement + reason
+  r = await __send({ type: 'pr:update', id: r.edit.id, patch: { replacement: 'fast fox leaps', reason: 'verbose', note: 'tighten' } });
+  const ins = document.querySelector('.page-redline-ins');
+  ok('ins rendered after last del', ins && ins.textContent === 'fast fox leaps' && ins.previousSibling.classList.contains('page-redline-del'));
+  ok('tooltip carries reason', ins.title.startsWith('Too verbose — tighten'));
+  const id1 = r.edit.id;
+
+  // 3. overlapping selection refused
+  { const firstDel = document.querySelector('.page-redline-del'); sel(p1.firstChild, 0, firstDel.firstChild, 3); }
+  r = await __send({ type: 'pr:mark-selection' });
+  ok('overlap refused', !!r.error);
+
+  // 4. second mark across a link, replacement empty
+  const p2 = document.getElementById('p2');
+  const link = p2.querySelector('a');
+  sel(link.firstChild, 2, p2.lastChild, 9); // "link inside" + " and more"
+  r = await __send({ type: 'pr:mark-selection' });
+  ok('mark across link ok', r.ok && r.edit.exact === 'link inside and more');
+  const id2 = r.edit.id;
+
+  // 5. list
+  r = await __send({ type: 'pr:list' });
+  ok('list has 2 anchored edits', r.edits.length === 2 && r.edits.every(e => e.anchored));
+
+  // 6. remove first
+  r = await __send({ type: 'pr:remove', id: id1 });
+  ok('removed: no ins, dels gone', !document.querySelector('.page-redline-ins') && document.querySelectorAll(`[data-pr-id="${id1}"]`).length === 0);
+  ok('page text unchanged after unmark', text() === before);
+
+  // 7. simulate reload: strip marks, re-run content script, expect re-anchoring from storage
+  r = await __send({ type: 'pr:update', id: id2, patch: { replacement: 'anchor text and extra' } });
+  for (const el of document.querySelectorAll('.page-redline-ins')) el.remove();
+  for (const span of document.querySelectorAll('.page-redline-del')) { const p = span.parentNode; while (span.firstChild) p.insertBefore(span.firstChild, span); span.remove(); p.normalize(); }
+  document.getElementById('page-redline-host')?.remove();
+  delete window.__pageRedlineLoaded;
+  __run(); await Promise.resolve(); await Promise.resolve();
+  const dels = document.querySelectorAll('.page-redline-del');
+  ok('re-anchored after reload', dels.length === 2 && [...dels].map(d => d.textContent).join('') === 'link inside and more');
+  ok('replacement re-rendered', document.querySelector('.page-redline-ins')?.textContent === 'anchor text and extra');
+
+  // 8. disambiguation: mark the SECOND "quick brown fox" occurrence and reload
+  sel(p1.lastChild, p1.lastChild.data.indexOf('quick'), p1.lastChild, p1.lastChild.data.indexOf('quick') + 15);
+  r = await __send({ type: 'pr:mark-selection' });
+  ok('second occurrence marked', r.ok && r.edit.exact === 'quick brown fox' && r.edit.suffix.startsWith(' again'));
+  const id3 = r.edit.id;
+  for (const el of document.querySelectorAll('.page-redline-ins')) el.remove();
+  for (const span of document.querySelectorAll('.page-redline-del')) { const p = span.parentNode; while (span.firstChild) p.insertBefore(span.firstChild, span); span.remove(); p.normalize(); }
+  document.getElementById('page-redline-host')?.remove();
+  delete window.__pageRedlineLoaded;
+  __run(); await Promise.resolve(); await Promise.resolve();
+  const d3 = document.querySelector(`.page-redline-del[data-pr-id="${id3}"]`);
+  ok('re-anchored to the second occurrence', d3 && d3.nextSibling && d3.nextSibling.textContent.startsWith(' again'));
+
+  // 9. clicking a mark opens the editor
+  d3.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  const host = document.getElementById('page-redline-host');
+  ok('editor opens on click', host && host.style.display === 'block');
+
+  document.getElementById('out').textContent = out.join('\n') + '\nDONE';
+})().catch(e => { document.getElementById('out').textContent = 'FAIL exception: ' + (e && e.stack || e); });
+</script>
+</body></html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Page Redline</title>
+  <style>
+    :root { color-scheme: light dark; --fg: #1d1d1f; --muted: #6e6e73; --bg: #fff; --line: #d9d9de; --del: #b71c1c; --ins: #1b5e20; --chip: #eef0f3; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #ededf0; --muted: #9a9aa3; --bg: #1f1f23; --line: #45454d; --del: #ff8a80; --ins: #a5d6a7; --chip: #2e2e35; } }
+    body { margin: 0; width: 380px; max-height: 560px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--fg); background: var(--bg); }
+    header { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 6px; border-bottom: 1px solid var(--line); }
+    header h1 { font-size: 14px; margin: 0; }
+    header .count { color: var(--muted); }
+    .page { padding: 4px 12px 8px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    ul { list-style: none; margin: 0; padding: 0; max-height: 400px; overflow: auto; }
+    li { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+    li.orphan { opacity: .6; }
+    .del { color: var(--del); text-decoration: line-through; word-break: break-word; }
+    .ins { color: var(--ins); text-decoration: underline; word-break: break-word; }
+    .arrow { color: var(--muted); margin: 0 4px; }
+    .text { cursor: pointer; }
+    .text:hover { text-decoration-color: currentColor; filter: brightness(1.15); }
+    .edit { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 6px; }
+    input, select, textarea { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; box-sizing: border-box; width: 100%; }
+    .meta { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+    .meta select { width: auto; min-width: 120px; }
+    .chip { background: var(--chip); border-radius: 999px; padding: 1px 8px; font-size: 11px; color: var(--muted); }
+    .actions { display: flex; gap: 6px; margin-left: auto; }
+    button { font: inherit; color: inherit; background: var(--chip); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+    button:hover { filter: brightness(1.08); }
+    button.danger { color: var(--del); }
+    footer { display: flex; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    footer .spacer { flex: 1; }
+    .empty { padding: 24px 12px; color: var(--muted); text-align: center; }
+    .empty code { background: var(--chip); padding: 1px 5px; border-radius: 4px; }
+    .flash { font-size: 11px; color: var(--muted); padding: 0 12px 6px; min-height: 14px; }
+  </style>
+</head>
+<body>
+  <header><h1>Page Redline</h1><span class="count" id="count"></span></header>
+  <div class="page" id="page"></div>
+  <ul id="list"></ul>
+  <div class="empty" id="empty" hidden></div>
+  <div class="flash" id="flash"></div>
+  <footer id="footer" hidden>
+    <button id="copy-md" title="Copy the list as Markdown">Copy Markdown</button>
+    <button id="copy-json" title="Copy the list as JSON">Copy JSON</button>
+    <span class="spacer"></span>
+    <button id="clear" class="danger">Clear all</button>
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>

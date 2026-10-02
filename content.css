@@ -1,0 +1,29 @@
+.page-redline-del {
+  text-decoration: line-through !important;
+  text-decoration-color: #d32f2f !important;
+  text-decoration-thickness: 2px !important;
+  background: rgba(211, 47, 47, 0.14) !important;
+  cursor: pointer !important;
+  border-radius: 2px;
+}
+.page-redline-ins {
+  text-decoration: underline !important;
+  text-decoration-color: #2e7d32 !important;
+  text-decoration-thickness: 2px !important;
+  background: rgba(46, 125, 50, 0.18) !important;
+  cursor: pointer !important;
+  border-radius: 2px;
+  margin-left: 0.2em;
+  font: inherit;
+  color: inherit;
+}
+.page-redline-del:hover,
+.page-redline-ins:hover {
+  outline: 1px solid rgba(0, 0, 0, 0.35) !important;
+  outline-offset: 1px;
+}
+.page-redline-flash {
+  outline: 3px solid #f9a825 !important;
+  outline-offset: 2px;
+  transition: outline-color 1.2s ease-out;
+}
