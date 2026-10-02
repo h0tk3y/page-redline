@@ -15,6 +15,7 @@ async function save() {
 }
 
 function render() {
+  $('#replacement-color').value = settings.replacementColor;
   const list = $('#list');
   list.textContent = '';
   settings.reasons.forEach((r, i) => {
@@ -53,15 +54,21 @@ function renderPreview() {
   const p = $('#preview');
   p.textContent = '';
   if (!settings.reasons.length) { p.textContent = 'No reasons defined.'; return; }
-  for (const r of settings.reasons) {
+  const rows = [{ label: 'no reason', color: '#d32f2f' }, ...settings.reasons];
+  for (const r of rows) {
     const line = document.createElement('div');
-    line.style.setProperty('--c', r.color);
     const del = document.createElement('span'); del.className = 'del'; del.textContent = r.label;
+    del.style.setProperty('--c', r.color);
     const ins = document.createElement('span'); ins.className = 'ins'; ins.textContent = 'replacement';
+    ins.style.setProperty('--c', settings.replacementColor);
     line.append(del, ins);
     p.appendChild(line);
   }
 }
+
+$('#replacement-color').addEventListener('input', () => { settings.replacementColor = $('#replacement-color').value; renderPreview(); });
+$('#replacement-color').addEventListener('change', () => { settings.replacementColor = $('#replacement-color').value; save(); });
+$('#replacement-reset').addEventListener('click', () => { settings.replacementColor = shared.DEFAULT_REPLACEMENT_COLOR; save(); render(); });
 
 $('#add').addEventListener('click', () => {
   const palette = ['#d32f2f', '#ef6c00', '#fbc02d', '#388e3c', '#0288d1', '#7b1fa2', '#c2185b', '#5d4037', '#455a64'];
@@ -75,8 +82,9 @@ $('#add').addEventListener('click', () => {
 });
 
 $('#reset').addEventListener('click', () => {
-  if (!confirm('Restore the default reasons and colors? Your custom reasons will be removed.')) return;
+  if (!confirm('Restore the default reasons, their colors and the replacement color? Your custom reasons will be removed.')) return;
   settings.reasons = shared.DEFAULT_REASONS.map((r) => ({ ...r }));
+  settings.replacementColor = shared.DEFAULT_REPLACEMENT_COLOR;
   save(); render();
 });
 

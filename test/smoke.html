@@ -56,7 +56,8 @@
   const ins = document.querySelector('.page-redline-ins');
   ok('ins rendered after last del', ins && ins.textContent === 'fast fox leaps' && ins.previousSibling.classList.contains('page-redline-del'));
   ok('tooltip carries reason', ins.title.startsWith('Too verbose — tighten'));
-  ok('reason color applied to marks', ins.style.getPropertyValue('--pr-color') === '#d32f2f' && document.querySelector('.page-redline-del').style.getPropertyValue('--pr-color') === '#d32f2f');
+  ok('reason color applied to struck text', document.querySelector('.page-redline-del').style.getPropertyValue('--pr-color') === '#d32f2f');
+  ok('replacement uses default green', ins.style.getPropertyValue('--pr-color') === '#2e7d32');
   const id1 = r.edit.id;
 
   // 3. overlapping selection refused
@@ -111,7 +112,7 @@
   ok('editor opens on click', host && host.style.display === 'block');
 
   // 10. settings: custom reason color + visibility toggle via storage change
-  const custom = { visible: false, reasons: [{ id: 'verbose', label: 'Wordy', color: '#123456' }] };
+  const custom = { visible: false, replacementColor: '#abcdef', reasons: [{ id: 'verbose', label: 'Wordy', color: '#123456' }] };
   __store.settings = custom;
   __onChanged({ settings: { newValue: custom } }, 'local');
   ok('hidden attribute set when invisible', document.documentElement.hasAttribute('data-page-redline-hidden'));
@@ -123,7 +124,8 @@
   __onChanged({ settings: { newValue: { ...custom, visible: true } } }, 'local');
   ok('hidden attribute removed when visible', !document.documentElement.hasAttribute('data-page-redline-hidden'));
   await __send({ type: 'pr:update', id: id3, patch: { reason: 'verbose', replacement: 'x' } });
-  ok('custom reason color applied', document.querySelector(`.page-redline-ins[data-pr-id="${id3}"]`).style.getPropertyValue('--pr-color') === '#123456');
+  ok('custom reason color applied to struck text', d3.style.getPropertyValue('--pr-color') === '#123456');
+  ok('custom replacement color applied', document.querySelector(`.page-redline-ins[data-pr-id="${id3}"]`).style.getPropertyValue('--pr-color') === '#abcdef');
   ok('removed-reason label survives', (await __send({ type: 'pr:update', id: id3, patch: { reason: 'gone' } })).ok && d3.title.startsWith('gone (removed reason)'));
 
   document.getElementById('out').textContent = out.join('\n') + '\nDONE';

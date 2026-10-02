@@ -12,6 +12,7 @@
     { id: 'other', label: 'Other', color: '#616161' },
   ];
   const HEX = /^#[0-9a-f]{6}$/i;
+  const DEFAULT_REPLACEMENT_COLOR = '#2e7d32';
 
   function normalizeSettings(raw) {
     const s = raw && typeof raw === 'object' ? raw : {};
@@ -24,12 +25,13 @@
             color: HEX.test(r.color || '') ? r.color.toLowerCase() : '#d32f2f',
           }))
       : DEFAULT_REASONS.map((r) => ({ ...r }));
-    return { visible: s.visible !== false, reasons };
+    const replacementColor = HEX.test(s.replacementColor || '') ? s.replacementColor.toLowerCase() : DEFAULT_REPLACEMENT_COLOR;
+    return { visible: s.visible !== false, reasons, replacementColor };
   }
 
   function newReasonId() {
     return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
-  globalThis.PageRedlineShared = { SETTINGS_KEY, DEFAULT_REASONS, normalizeSettings, newReasonId };
+  globalThis.PageRedlineShared = { SETTINGS_KEY, DEFAULT_REASONS, DEFAULT_REPLACEMENT_COLOR, normalizeSettings, newReasonId };
 })();

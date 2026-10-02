@@ -8,6 +8,8 @@
     @media (prefers-color-scheme: dark) { :root { --fg: #ededf0; --muted: #9a9aa3; --bg: #1f1f23; --line: #45454d; --chip: #2e2e35; --del: #ff8a80; } }
     body { margin: 0; padding: 16px; min-width: 420px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--fg); background: var(--bg); }
     h1 { font-size: 15px; margin: 0 0 4px; }
+    h2 { font-size: 13px; margin: 14px 0 2px; }
+    .setting { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
     p.lead { color: var(--muted); margin: 0 0 12px; }
     ul { list-style: none; margin: 0; padding: 0; }
     li { display: grid; grid-template-columns: 36px 1fr auto auto auto; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
@@ -25,8 +27,10 @@
   </style>
 </head>
 <body>
-  <h1>Reasons</h1>
-  <p class="lead">Each reason has its own color. Marks on the page are tinted with the color of their reason; marks without a reason stay red (removed) and green (replacement).</p>
+  <h1>Page Redline settings</h1>
+  <p class="lead">Struck-through text is tinted with the color of its reason (red when no reason is set). Replacement text always uses the replacement color.</p>
+  <div class="setting"><input type="color" id="replacement-color" title="Replacement color"><label for="replacement-color">Replacement color</label><button id="replacement-reset" title="Back to the default green">Default</button></div>
+  <h2>Reasons</h2>
   <ul id="list"></ul>
   <footer>
     <button id="add">Add reason</button>

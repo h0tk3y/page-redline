@@ -39,6 +39,7 @@
     else { document.documentElement.setAttribute('data-page-redline-hidden', ''); closeEditor(); }
   }
   function applyColor(el, edit) {
+    if (el.classList.contains(INS)) { el.style.setProperty('--pr-color', settings.replacementColor); return; }
     const r = reasonOf(edit.reason);
     if (r) el.style.setProperty('--pr-color', r.color);
     else el.style.removeProperty('--pr-color');

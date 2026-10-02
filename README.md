@@ -20,10 +20,11 @@ popup lists every edit on the current page.
    `Alt+Shift+H` hides every mark on every page (the text reads as if untouched) and shows
    them again. Edits are kept while hidden.
 6. **Reasons and colors**: *Reasons…* in the popup (or the extension's options page) opens
-   an editable list. Rename, recolor, reorder, add or remove reasons; a preview shows how
-   marks will look. Marks on the page are tinted with their reason's color; marks without
-   a reason stay red (removed) and green (replacement). Removing a reason keeps existing
-   edits, which show it as a removed reason until you pick another.
+   the settings. Struck-through text is tinted with the color of its reason (red when no
+   reason is set); rename, recolor, reorder, add or remove reasons, with a live preview.
+   Replacement text uses one **replacement color**, green by default, also set there.
+   Removing a reason keeps existing edits, which show it as a removed reason until you
+   pick another.
 
 Marks never change the page's own text: they wrap it in spans, so unmarking restores the
 page exactly. Edits are anchored by the exact text plus 32 characters of context on each
@@ -78,5 +79,5 @@ The popup is read from disk on every open, so it can look up to date while the r
 - `content.js` / `content.css` — marking, inline editor (shadow DOM), storage, anchoring.
 - `shared.js` — settings schema (visibility, reasons with colors) and defaults.
 - `popup.html` / `popup.js` — the edit list and the show/hide toggle.
-- `options.html` / `options.js` — the editable reasons list with colors.
+- `options.html` / `options.js` — the replacement color and the editable reasons list with colors.
 - `icons/` — generated PNG icons.
