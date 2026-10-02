@@ -26,7 +26,8 @@
           }))
       : DEFAULT_REASONS.map((r) => ({ ...r }));
     const replacementColor = HEX.test(s.replacementColor || '') ? s.replacementColor.toLowerCase() : DEFAULT_REPLACEMENT_COLOR;
-    return { visible: s.visible !== false, reasons, replacementColor };
+    const lastReason = typeof s.lastReason === 'string' ? s.lastReason : '';
+    return { visible: s.visible !== false, reasons, replacementColor, lastReason };
   }
 
   function newReasonId() {

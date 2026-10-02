@@ -23,7 +23,7 @@ popup lists every edit on the current page.
    reason is set); rename, recolor, reorder, add or remove reasons, with a live preview.
    Replacement text uses one **replacement color**, green by default, also set there.
    Removing a reason keeps existing edits, which show it as a removed reason until you
-   pick another.
+   pick another. The reason you chose last is preselected for new edits.
 
 Marks never change the page's own text: they wrap it in spans, so unmarking restores the
 page exactly. Edits are anchored by the exact text plus 32 characters of context on each

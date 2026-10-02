@@ -126,6 +126,15 @@
   await __send({ type: 'pr:update', id: id3, patch: { reason: 'verbose', replacement: 'x' } });
   ok('custom reason color applied to struck text', d3.style.getPropertyValue('--pr-color') === '#123456');
   ok('custom replacement color applied', document.querySelector(`.page-redline-ins[data-pr-id="${id3}"]`).style.getPropertyValue('--pr-color') === '#abcdef');
+  // 11. the last chosen reason becomes the default for new edits
+  __store.settings = { reasons: [{ id: 'verbose', label: 'Wordy', color: '#123456' }, { id: 'dup', label: 'Dup', color: '#654321' }] };
+  __onChanged({ settings: { newValue: __store.settings } }, 'local');
+  await __send({ type: 'pr:update', id: id3, patch: { reason: 'dup' } });
+  ok('last reason persisted to settings', __store.settings.lastReason === 'dup');
+  sel(p2.firstChild, 0, p2.firstChild, 6); // "Second"
+  r = await __send({ type: 'pr:mark-selection' });
+  ok('new edit defaults to last reason', r.ok && r.edit.reason === 'dup' && document.querySelector(`.page-redline-del[data-pr-id="${r.edit.id}"]`).style.getPropertyValue('--pr-color') === '#654321');
+  await __send({ type: 'pr:remove', id: r.edit.id });
   ok('removed-reason label survives', (await __send({ type: 'pr:update', id: id3, patch: { reason: 'gone' } })).ok && d3.title.startsWith('gone (removed reason)'));
 
   document.getElementById('out').textContent = out.join('\n') + '\nDONE';

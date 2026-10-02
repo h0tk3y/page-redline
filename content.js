@@ -233,7 +233,7 @@
       prefix: text.slice(Math.max(0, s - CTX), s),
       suffix: text.slice(e, e + CTX),
       replacement: '',
-      reason: '',
+      reason: reasonOf(settings.lastReason) ? settings.lastReason : '',
       note: '',
       createdAt: Date.now(),
     };
@@ -251,7 +251,13 @@
     const edit = edits.find((x) => x.id === id);
     if (!edit) return { error: 'Unknown edit.' };
     if (typeof patch.replacement === 'string') edit.replacement = patch.replacement.trim();
-    if (typeof patch.reason === 'string') edit.reason = patch.reason;
+    if (typeof patch.reason === 'string') {
+      edit.reason = patch.reason;
+      if (settings.lastReason !== patch.reason) {
+        settings.lastReason = patch.reason;
+        api.storage.local.set({ [SETTINGS_KEY]: settings });
+      }
+    }
     if (typeof patch.note === 'string') edit.note = patch.note.trim();
     renderIns(edit);
     refreshTitles(edit);
