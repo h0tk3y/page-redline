@@ -51,6 +51,25 @@ Runs `test/smoke.html` in headless Chrome and prints PASS/FAIL per check. The pa
 the extension API, so the test exercises the content script's marking, replacement
 rendering, removal and re-anchoring without installing the extension.
 
+```
+CHROME_BIN="/path/to/Google Chrome for Testing" node test/e2e.mjs
+```
+
+Loads the real unpacked extension into a headless Chrome and drives it over the DevTools
+protocol: pings the content script, checks the context menu is registered, marks a
+selection, lists edits, toggles visibility, reloads the page and checks re-anchoring, and
+opens the popup and options pages. Branded Google Chrome 137+ ignores `--load-extension`,
+so point `CHROME_BIN` at Chrome for Testing (`npx @puppeteer/browsers install chrome@stable`)
+or Chromium.
+
+## After editing the extension
+
+Changes to `manifest.json`, `background.js`, `shared.js` or `content.js` only take effect
+after you **reload the extension** (`chrome://extensions` → reload, or `about:debugging` →
+Reload) and then reload the open pages. Until then the old manifest is still in force: new
+content-script files are not injected, new menu items and the options page do not exist.
+The popup is read from disk on every open, so it can look up to date while the rest is stale.
+
 ## Layout
 
 - `manifest.json` — MV3 manifest. `background.scripts` is for Firefox, `background.service_worker`

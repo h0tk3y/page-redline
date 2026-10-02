@@ -13,6 +13,10 @@
   const CTX = 32; // anchor context length (chars) on each side
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'TEMPLATE', 'SVG', 'IFRAME', 'OBJECT']);
   const shared = globalThis.PageRedlineShared;
+  if (!shared) {
+    console.error('Page Redline: shared.js was not injected. The extension was updated on disk but not reloaded — reload it (chrome://extensions or about:debugging), then reload this page.');
+    return;
+  }
   const SETTINGS_KEY = shared.SETTINGS_KEY;
   let settings = shared.normalizeSettings(null);
   const reasonOf = (id) => (id ? settings.reasons.find((r) => r.id === id) || null : null);
