@@ -61,13 +61,5 @@
   "options_ui": {
     "page": "options.html",
     "open_in_tab": false
-  },
-  "commands": {
-    "toggle-visibility": {
-      "suggested_key": {
-        "default": "Alt+Shift+H"
-      },
-      "description": "Show or hide Page Redline edits"
-    }
   }
 }

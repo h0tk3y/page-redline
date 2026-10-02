@@ -16,9 +16,8 @@ popup lists every edit on the current page.
 4. Open the toolbar popup to see all edits on the page: edit replacements, reasons and
    notes inline, jump to an edit on the page, remove one, clear all, or copy the list as
    Markdown or JSON.
-5. **Show / hide edits**: the toggle in the popup header, the right-click menu entry, or
-   `Alt+Shift+H` hides every mark on every page (the text reads as if untouched) and shows
-   them again. Edits are kept while hidden.
+5. **Show / hide edits**: the toggle in the popup header hides every mark on every page
+   (the text reads as if untouched) and shows them again. Edits are kept while hidden.
 6. **Reasons and colors**: *Reasons…* in the popup (or the extension's options page) opens
    the settings. Struck-through text is tinted with the color of its reason (red when no
    reason is set); rename, recolor, reorder, add or remove reasons, with a live preview.
@@ -75,7 +74,7 @@ The popup is read from disk on every open, so it can look up to date while the r
 
 - `manifest.json` — MV3 manifest. `background.scripts` is for Firefox, `background.service_worker`
   for Chrome; each browser ignores the other key (Chrome logs a warning).
-- `background.js` — context menu (mark, show/hide) and the keyboard shortcut.
+- `background.js` — registers the context menu entry and forwards it to the content script.
 - `content.js` / `content.css` — marking, inline editor (shadow DOM), storage, anchoring.
 - `shared.js` — settings schema (visibility, reasons with colors) and defaults.
 - `popup.html` / `popup.js` — the edit list and the show/hide toggle.
