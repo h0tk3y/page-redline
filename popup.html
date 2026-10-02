@@ -10,6 +10,9 @@
     header { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 6px; border-bottom: 1px solid var(--line); }
     header h1 { font-size: 14px; margin: 0; }
     header .count { color: var(--muted); }
+    header .toggle { margin-left: auto; display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: var(--muted); }
+    .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; border: 1px solid var(--line); }
+    body.hidden-marks li .text { opacity: .55; }
     .page { padding: 4px 12px 8px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     ul { list-style: none; margin: 0; padding: 0; max-height: 400px; overflow: auto; }
     li { padding: 8px 12px; border-bottom: 1px solid var(--line); }
@@ -36,7 +39,10 @@
   </style>
 </head>
 <body>
-  <header><h1>Page Redline</h1><span class="count" id="count"></span></header>
+  <header>
+    <h1>Page Redline</h1><span class="count" id="count"></span>
+    <label class="toggle" title="Show or hide all edits on pages (Alt+Shift+H)"><input type="checkbox" id="visible"> Show edits</label>
+  </header>
   <div class="page" id="page"></div>
   <ul id="list"></ul>
   <div class="empty" id="empty" hidden></div>
@@ -44,9 +50,11 @@
   <footer id="footer" hidden>
     <button id="copy-md" title="Copy the list as Markdown">Copy Markdown</button>
     <button id="copy-json" title="Copy the list as JSON">Copy JSON</button>
+    <button id="reasons" title="Edit the list of reasons and their colors">Reasons…</button>
     <span class="spacer"></span>
     <button id="clear" class="danger">Clear all</button>
   </footer>
+  <script src="shared.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

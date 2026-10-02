@@ -1,16 +1,18 @@
 .page-redline-del {
+  --pr-color: #d32f2f;
   text-decoration: line-through !important;
-  text-decoration-color: #d32f2f !important;
+  text-decoration-color: var(--pr-color) !important;
   text-decoration-thickness: 2px !important;
-  background: rgba(211, 47, 47, 0.14) !important;
+  background: color-mix(in srgb, var(--pr-color) 22%, transparent) !important;
   cursor: pointer !important;
   border-radius: 2px;
 }
 .page-redline-ins {
+  --pr-color: #2e7d32;
   text-decoration: underline !important;
-  text-decoration-color: #2e7d32 !important;
+  text-decoration-color: var(--pr-color) !important;
   text-decoration-thickness: 2px !important;
-  background: rgba(46, 125, 50, 0.18) !important;
+  background: color-mix(in srgb, var(--pr-color) 14%, transparent) !important;
   cursor: pointer !important;
   border-radius: 2px;
   margin-left: 0.2em;
@@ -19,11 +21,21 @@
 }
 .page-redline-del:hover,
 .page-redline-ins:hover {
-  outline: 1px solid rgba(0, 0, 0, 0.35) !important;
+  outline: 1px solid var(--pr-color) !important;
   outline-offset: 1px;
 }
 .page-redline-flash {
   outline: 3px solid #f9a825 !important;
   outline-offset: 2px;
   transition: outline-color 1.2s ease-out;
+}
+/* Hidden mode: marks become indistinguishable from the page text. */
+html[data-page-redline-hidden] .page-redline-del {
+  text-decoration: inherit !important;
+  background: transparent !important;
+  cursor: inherit !important;
+  outline: none !important;
+}
+html[data-page-redline-hidden] .page-redline-ins {
+  display: none !important;
 }

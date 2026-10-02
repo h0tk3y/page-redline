@@ -10,10 +10,10 @@
     window.chrome = {
       storage: {
         local: {
-          get: async (k) => ({ [k]: store[k] }),
+          get: async (k) => Object.fromEntries((Array.isArray(k) ? k : [k]).map((x) => [x, store[x]])),
           set: async (obj) => { Object.assign(store, JSON.parse(JSON.stringify(obj))); },
         },
-        onChanged: { addListener() {} },
+        onChanged: { addListener: (fn) => (window.__onChanged = fn) },
       },
       runtime: { onMessage: { addListener: (fn) => listeners.push(fn) } },
     };
@@ -29,7 +29,9 @@
 </article>
 <pre id="out"></pre>
 <script>
-  const __src = (() => { const x = new XMLHttpRequest(); x.open('GET', '../content.js', false); x.send(); return x.responseText; })();
+  const __load = (f) => { const x = new XMLHttpRequest(); x.open('GET', f, false); x.send(); return x.responseText; };
+  const __shared = __load('../shared.js'), __src = __load('../content.js');
+  (0, eval)(__shared);
   const __run = () => (0, eval)(__src);
   __run();
 </script>
@@ -54,6 +56,7 @@
   const ins = document.querySelector('.page-redline-ins');
   ok('ins rendered after last del', ins && ins.textContent === 'fast fox leaps' && ins.previousSibling.classList.contains('page-redline-del'));
   ok('tooltip carries reason', ins.title.startsWith('Too verbose — tighten'));
+  ok('reason color applied to marks', ins.style.getPropertyValue('--pr-color') === '#d32f2f' && document.querySelector('.page-redline-del').style.getPropertyValue('--pr-color') === '#d32f2f');
   const id1 = r.edit.id;
 
   // 3. overlapping selection refused
@@ -106,6 +109,22 @@
   d3.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   const host = document.getElementById('page-redline-host');
   ok('editor opens on click', host && host.style.display === 'block');
+
+  // 10. settings: custom reason color + visibility toggle via storage change
+  const custom = { visible: false, reasons: [{ id: 'verbose', label: 'Wordy', color: '#123456' }] };
+  __store.settings = custom;
+  __onChanged({ settings: { newValue: custom } }, 'local');
+  ok('hidden attribute set when invisible', document.documentElement.hasAttribute('data-page-redline-hidden'));
+  ok('editor closed when hidden', host.style.display === 'none');
+  d3.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  ok('clicks ignored while hidden', host.style.display === 'none');
+  let l = await __send({ type: 'pr:list' });
+  ok('list reports visibility and custom reasons', l.visible === false && l.reasons.length === 1 && l.reasons[0].label === 'Wordy');
+  __onChanged({ settings: { newValue: { ...custom, visible: true } } }, 'local');
+  ok('hidden attribute removed when visible', !document.documentElement.hasAttribute('data-page-redline-hidden'));
+  await __send({ type: 'pr:update', id: id3, patch: { reason: 'verbose', replacement: 'x' } });
+  ok('custom reason color applied', document.querySelector(`.page-redline-ins[data-pr-id="${id3}"]`).style.getPropertyValue('--pr-color') === '#123456');
+  ok('removed-reason label survives', (await __send({ type: 'pr:update', id: id3, patch: { reason: 'gone' } })).ok && d3.title.startsWith('gone (removed reason)'));
 
   document.getElementById('out').textContent = out.join('\n') + '\nDONE';
 })().catch(e => { document.getElementById('out').textContent = 'FAIL exception: ' + (e && e.stack || e); });

@@ -11,10 +11,11 @@ async function send(msg) {
   return api.tabs.sendMessage(tabId, msg);
 }
 
-function reasonLabel(code) {
-  const hit = (state.reasons || []).find(([c]) => c === code);
-  return hit ? hit[1] : code;
-}
+const shared = globalThis.PageRedlineShared;
+let settings = shared.normalizeSettings(null);
+
+function reasonOf(id) { return id ? (state.reasons || []).find((r) => r.id === id) || null : null; }
+function reasonLabel(id) { const r = reasonOf(id); return r ? r.label : id ? `${id} (removed reason)` : ''; }
 
 function flash(text) {
   $('#flash').textContent = text;
@@ -78,12 +79,20 @@ function render() {
 
     const meta = document.createElement('div');
     meta.className = 'meta';
+    const swatch = document.createElement('span');
+    swatch.className = 'swatch';
     const sel = document.createElement('select');
-    for (const [code, label] of state.reasons) {
-      const o = document.createElement('option'); o.value = code; o.textContent = label; sel.appendChild(o);
+    const paint = () => { const r = reasonOf(sel.value); swatch.style.background = r ? r.color : 'transparent'; };
+    const none = document.createElement('option'); none.value = ''; none.textContent = '— no reason —'; sel.appendChild(none);
+    for (const r of state.reasons) {
+      const o = document.createElement('option'); o.value = r.id; o.textContent = r.label; sel.appendChild(o);
+    }
+    if (e.reason && !reasonOf(e.reason)) {
+      const o = document.createElement('option'); o.value = e.reason; o.textContent = reasonLabel(e.reason); sel.appendChild(o);
     }
     sel.value = e.reason || '';
-    sel.addEventListener('change', () => update(e.id, { reason: sel.value }));
+    paint();
+    sel.addEventListener('change', () => { paint(); update(e.id, { reason: sel.value }); });
     const note = document.createElement('input');
     note.placeholder = 'Note…';
     note.value = e.note || '';
@@ -94,7 +103,7 @@ function render() {
     rm.textContent = '✕';
     rm.title = 'Remove this edit';
     rm.addEventListener('click', async () => { await send({ type: 'pr:remove', id: e.id }); await refresh(); });
-    meta.append(sel, note, rm);
+    meta.append(swatch, sel, note, rm);
     li.appendChild(meta);
     list.appendChild(li);
   }
@@ -113,6 +122,7 @@ async function refresh() {
   try {
     state = await send({ type: 'pr:list' });
     if (!state || !state.ok) throw new Error('no response');
+    document.body.classList.toggle('hidden-marks', state.visible === false);
     render();
   } catch (err) {
     state = null;
@@ -123,6 +133,22 @@ async function refresh() {
     $('#empty').innerHTML = 'Page Redline is not running on this page.<br><br>It cannot run on browser pages or extension stores. In Firefox, also check that the extension is allowed to access this site (toolbar icon → Permissions), then reload the page.';
   }
 }
+
+async function loadSettings() {
+  const r = await api.storage.local.get(shared.SETTINGS_KEY);
+  settings = shared.normalizeSettings(r[shared.SETTINGS_KEY]);
+  $('#visible').checked = settings.visible;
+  document.body.classList.toggle('hidden-marks', !settings.visible);
+}
+$('#visible').addEventListener('change', async () => {
+  settings.visible = $('#visible').checked;
+  await api.storage.local.set({ [shared.SETTINGS_KEY]: settings });
+  document.body.classList.toggle('hidden-marks', !settings.visible);
+});
+api.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes[shared.SETTINGS_KEY]) { loadSettings(); refresh(); }
+});
+$('#reasons').addEventListener('click', () => api.runtime.openOptionsPage());
 
 $('#copy-md').addEventListener('click', async () => { await navigator.clipboard.writeText(toMarkdown()); flash('Copied as Markdown.'); });
 $('#copy-json').addEventListener('click', async () => {
@@ -136,4 +162,4 @@ $('#clear').addEventListener('click', async () => {
   await refresh();
 });
 
-refresh();
+loadSettings().then(refresh);

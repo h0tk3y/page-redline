@@ -12,18 +12,11 @@
   const HOST_ID = 'page-redline-host';
   const CTX = 32; // anchor context length (chars) on each side
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'TEMPLATE', 'SVG', 'IFRAME', 'OBJECT']);
-  const REASONS = [
-    ['', '— no reason —'],
-    ['verbose', 'Too verbose'],
-    ['unclear', 'Unclear'],
-    ['incorrect', 'Incorrect'],
-    ['duplicate', 'Duplicate'],
-    ['outdated', 'Outdated'],
-    ['offtopic', 'Off-topic'],
-    ['style', 'Style / tone'],
-    ['other', 'Other'],
-  ];
-  const REASON_LABEL = Object.fromEntries(REASONS);
+  const shared = globalThis.PageRedlineShared;
+  const SETTINGS_KEY = shared.SETTINGS_KEY;
+  let settings = shared.normalizeSettings(null);
+  const reasonOf = (id) => (id ? settings.reasons.find((r) => r.id === id) || null : null);
+  const reasonLabel = (id) => { const r = reasonOf(id); return r ? r.label : id ? `${id} (removed reason)` : ''; };
 
   const pageKey = location.origin + location.pathname + location.search;
   const storageKey = 'page:' + pageKey;
@@ -32,8 +25,19 @@
 
   // ---------- storage ----------
   async function load() {
-    const r = await api.storage.local.get(storageKey);
+    const r = await api.storage.local.get([storageKey, SETTINGS_KEY]);
     edits = Array.isArray(r[storageKey]) ? r[storageKey] : [];
+    settings = shared.normalizeSettings(r[SETTINGS_KEY]);
+    applyVisibility();
+  }
+  function applyVisibility() {
+    if (settings.visible) document.documentElement.removeAttribute('data-page-redline-hidden');
+    else { document.documentElement.setAttribute('data-page-redline-hidden', ''); closeEditor(); }
+  }
+  function applyColor(el, edit) {
+    const r = reasonOf(edit.reason);
+    if (r) el.style.setProperty('--pr-color', r.color);
+    else el.style.removeProperty('--pr-color');
   }
   async function save() {
     await api.storage.local.set({ [storageKey]: edits });
@@ -115,7 +119,7 @@
 
   function tooltip(edit) {
     const parts = [];
-    if (edit.reason) parts.push(REASON_LABEL[edit.reason] || edit.reason);
+    if (edit.reason) parts.push(reasonLabel(edit.reason));
     if (edit.note) parts.push(edit.note);
     parts.push(edit.replacement ? `Replace with: “${edit.replacement}”` : 'Remove');
     return parts.join(' — ');
@@ -153,6 +157,7 @@
       span.className = DEL;
       span.dataset.prId = edit.id;
       span.title = tooltip(edit);
+      applyColor(span, edit);
       t.parentNode.insertBefore(span, t);
       span.appendChild(t);
       last = span;
@@ -175,12 +180,13 @@
     }
     ins.textContent = edit.replacement;
     ins.title = tooltip(edit);
+    applyColor(ins, edit);
   }
 
   function refreshTitles(edit) {
-    for (const s of delSpans(edit.id)) s.title = tooltip(edit);
+    for (const s of delSpans(edit.id)) { s.title = tooltip(edit); applyColor(s, edit); }
     const ins = insSpan(edit.id);
-    if (ins) ins.title = tooltip(edit);
+    if (ins) { ins.title = tooltip(edit); applyColor(ins, edit); }
   }
 
   function unmark(id) {
@@ -269,7 +275,8 @@
       ok: true,
       url: location.href,
       title: document.title,
-      reasons: REASONS,
+      reasons: settings.reasons,
+      visible: settings.visible,
       edits: edits.map((e) => ({ ...e, anchored: isAnchored(e.id) })),
     };
   }
@@ -308,6 +315,7 @@
         button.primary { background: #2e7d32; border-color: #2e7d32; color: #fff; }
         button.danger { color: #b71c1c; margin-left: auto; }
         .hint { margin-top: 8px; color: #6e6e73; font-size: 11px; }
+        .swatch { width: 14px; height: 14px; border-radius: 50%; flex: none; border: 1px solid rgba(0,0,0,.2); background: transparent; }
         @media (prefers-color-scheme: dark) {
           .card { background: #1f1f23; color: #ededf0; border-color: #45454d; }
           .orig { color: #ff8a80; }
@@ -322,7 +330,7 @@
         <label>Replacement <span style="font-weight:400;color:#6e6e73">(leave empty to just strike through)</span></label>
         <textarea rows="2" class="repl" placeholder="New text…"></textarea>
         <label>Reason</label>
-        <select class="reason"></select>
+        <div style="display:flex;gap:6px;align-items:center"><span class="swatch"></span><select class="reason"></select></div>
         <input class="note" type="text" placeholder="Optional note…" style="margin-top:6px">
         <div class="row">
           <button class="primary save">Save</button>
@@ -331,12 +339,7 @@
         </div>
         <div class="hint">Enter saves · Esc closes · click any mark to edit it later</div>
       </div>`;
-    const sel = shadow.querySelector('.reason');
-    for (const [value, label] of REASONS) {
-      const o = document.createElement('option');
-      o.value = value; o.textContent = label;
-      sel.appendChild(o);
-    }
+    shadow.querySelector('.reason').addEventListener('change', updateSwatch);
     shadow.querySelector('.save').addEventListener('click', saveFromEditor);
     shadow.querySelector('.close').addEventListener('click', closeEditor);
     shadow.querySelector('.remove').addEventListener('click', () => { if (editingId) removeEdit(editingId); });
@@ -348,6 +351,30 @@
     shadow.addEventListener('keyup', (ev) => ev.stopPropagation());
     shadow.addEventListener('keypress', (ev) => ev.stopPropagation());
     (document.body || document.documentElement).appendChild(host);
+  }
+
+  function fillReasonSelect(current) {
+    const sel = shadow.querySelector('.reason');
+    sel.textContent = '';
+    const none = document.createElement('option');
+    none.value = ''; none.textContent = '— no reason —';
+    sel.appendChild(none);
+    for (const r of settings.reasons) {
+      const o = document.createElement('option');
+      o.value = r.id; o.textContent = r.label;
+      sel.appendChild(o);
+    }
+    if (current && !reasonOf(current)) {
+      const o = document.createElement('option');
+      o.value = current; o.textContent = reasonLabel(current);
+      sel.appendChild(o);
+    }
+    sel.value = current || '';
+    updateSwatch();
+  }
+  function updateSwatch() {
+    const r = reasonOf(shadow.querySelector('.reason').value);
+    shadow.querySelector('.swatch').style.background = r ? r.color : 'transparent';
   }
 
   function saveFromEditor() {
@@ -363,12 +390,12 @@
   function openEditor(id) {
     const edit = edits.find((x) => x.id === id);
     const spans = delSpans(id);
-    if (!edit || !spans.length) return;
+    if (!edit || !spans.length || !settings.visible) return;
     ensureEditor();
     editingId = id;
     shadow.querySelector('.orig').textContent = edit.exact;
     shadow.querySelector('.repl').value = edit.replacement || '';
-    shadow.querySelector('.reason').value = edit.reason || '';
+    fillReasonSelect(edit.reason || '');
     shadow.querySelector('.note').value = edit.note || '';
     const card = shadow.querySelector('.card');
     host.style.display = 'block';
@@ -396,7 +423,7 @@
   document.addEventListener('click', (ev) => {
     const path = ev.composedPath ? ev.composedPath() : [];
     if (host && path.includes(host)) return;
-    const mark = ev.target instanceof Element ? ev.target.closest(`.${DEL}, .${INS}`) : null;
+    const mark = settings.visible && ev.target instanceof Element ? ev.target.closest(`.${DEL}, .${INS}`) : null;
     if (mark) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -426,7 +453,14 @@
 
   // Keep in sync when the same page is open in another tab.
   api.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'local' || !changes[storageKey]) return;
+    if (area !== 'local') return;
+    if (changes[SETTINGS_KEY]) {
+      settings = shared.normalizeSettings(changes[SETTINGS_KEY].newValue);
+      applyVisibility();
+      for (const e of edits) refreshTitles(e);
+      if (editingId) fillReasonSelect(shadow.querySelector('.reason').value);
+    }
+    if (!changes[storageKey]) return;
     const incoming = changes[storageKey].newValue || [];
     if (JSON.stringify(incoming) === JSON.stringify(edits)) return;
     for (const e of edits) unmark(e.id);
