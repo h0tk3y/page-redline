@@ -10,7 +10,8 @@
   const INS = 'page-redline-ins';
   const FLASH = 'page-redline-flash';
   const HOST_ID = 'page-redline-host';
-  const CTX = 32; // anchor context length (chars) on each side
+  const CTX = 32; // minimum anchor context (chars) on each side
+  const MAX_CTX = 2048; // grown while the surroundings repeat elsewhere on the page
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'TEMPLATE', 'SVG', 'IFRAME', 'OBJECT']);
   const shared = globalThis.PageRedlineShared;
   if (!shared) {
@@ -101,20 +102,41 @@
   function commonPrefix(a, b) { let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return i; }
   function commonSuffix(a, b) { let i = 0; while (i < a.length && i < b.length && a[a.length - 1 - i] === b[b.length - 1 - i]) i++; return i; }
 
-  function findRange(edit, map = collectText()) {
+  function occurrences(text, exact, limit = 500) {
+    const out = [];
+    for (let i = text.indexOf(exact); i !== -1 && out.length < limit; i = text.indexOf(exact, i + 1)) out.push(i);
+    return out;
+  }
+
+  // Candidate ranges for an edit, best match first. The score is how much of the stored
+  // context matches around each occurrence; ties keep document order.
+  function findRanges(edit, map = collectText()) {
     const { text } = map;
-    if (!edit.exact) return null;
-    const candidates = [];
-    for (let i = text.indexOf(edit.exact); i !== -1 && candidates.length < 500; i = text.indexOf(edit.exact, i + 1)) candidates.push(i);
-    if (!candidates.length) return null;
-    let best = candidates[0], bestScore = -1;
-    for (const c of candidates) {
+    if (!edit.exact) return [];
+    const prefix = edit.prefix || '', suffix = edit.suffix || '';
+    const scored = occurrences(text, edit.exact).map((c, order) => {
       const end = c + edit.exact.length;
-      const score = commonSuffix(text.slice(Math.max(0, c - CTX), c), edit.prefix || '')
-        + commonPrefix(text.slice(end, end + CTX), edit.suffix || '');
-      if (score > bestScore) { bestScore = score; best = c; }
+      const score = commonSuffix(text.slice(Math.max(0, c - prefix.length), c), prefix)
+        + commonPrefix(text.slice(end, end + suffix.length), suffix);
+      return { c, order, score };
+    });
+    scored.sort((a, b) => b.score - a.score || a.order - b.order);
+    return scored.map(({ c }) => rangeFromOffsets(c, c + edit.exact.length, map)).filter(Boolean);
+  }
+
+  // Smallest context (>= CTX) that distinguishes the occurrence at s from every other
+  // occurrence of the same text on the page.
+  function contextLength(text, s, e) {
+    const exact = text.slice(s, e);
+    const others = occurrences(text, exact, 2000).filter((c) => c !== s);
+    let ctx = CTX;
+    while (ctx < MAX_CTX) {
+      const before = text.slice(Math.max(0, s - ctx), s), after = text.slice(e, e + ctx);
+      const clash = others.some((c) => text.slice(Math.max(0, c - ctx), c) === before && text.slice(c + exact.length, c + exact.length + ctx) === after);
+      if (!clash) break;
+      ctx *= 2;
     }
-    return rangeFromOffsets(best, best + edit.exact.length, map);
+    return Math.min(ctx, MAX_CTX);
   }
 
   // ---------- DOM marks ----------
@@ -208,8 +230,8 @@
   function anchorAll() {
     for (const edit of edits) {
       if (isAnchored(edit.id)) continue;
-      const range = findRange(edit);
-      if (range) applyMark(range, edit);
+      // Try candidates best-first; one already covered by another mark is skipped.
+      for (const range of findRanges(edit)) if (applyMark(range, edit)) break;
     }
   }
 
@@ -227,11 +249,12 @@
     while (s < e && /\s/.test(text[s])) s++;
     while (e > s && /\s/.test(text[e - 1])) e--;
     if (e <= s) return { error: 'The selection contains no text.' };
+    const ctx = contextLength(text, s, e);
     const edit = {
       id: uid(),
       exact: text.slice(s, e),
-      prefix: text.slice(Math.max(0, s - CTX), s),
-      suffix: text.slice(e, e + CTX),
+      prefix: text.slice(Math.max(0, s - ctx), s),
+      suffix: text.slice(e, e + ctx),
       replacement: '',
       reason: reasonOf(settings.lastReason) ? settings.lastReason : '',
       note: '',

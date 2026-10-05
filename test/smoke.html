@@ -26,6 +26,11 @@
   <h2>Heading one</h2>
   <p id="p1">The quick <b>brown fox</b> jumps over the lazy dog. The quick brown fox again.</p>
   <p id="p2">Second paragraph with <a href="#x">a link inside</a> and more words after it.</p>
+  <section id="boiler">
+    <p class="dup">This boilerplate paragraph is repeated verbatim further down the page so that the phrase marked here has identical surroundings for well over thirty-two characters on each side of the target phrase, which defeats a short context window.</p>
+    <p>Something unique sits between the two copies.</p>
+    <p class="dup">This boilerplate paragraph is repeated verbatim further down the page so that the phrase marked here has identical surroundings for well over thirty-two characters on each side of the target phrase, which defeats a short context window.</p>
+  </section>
 </article>
 <pre id="out"></pre>
 <script>
@@ -136,6 +141,35 @@
   ok('new edit defaults to last reason', r.ok && r.edit.reason === 'dup' && document.querySelector(`.page-redline-del[data-pr-id="${r.edit.id}"]`).style.getPropertyValue('--pr-color') === '#654321');
   await __send({ type: 'pr:remove', id: r.edit.id });
   ok('removed-reason label survives', (await __send({ type: 'pr:update', id: id3, patch: { reason: 'gone' } })).ok && d3.title.startsWith('gone (removed reason)'));
+
+  // 12. identical surroundings: context grows until the occurrence is unique
+  const reloadScript = async () => {
+    for (const el of document.querySelectorAll('.page-redline-ins')) el.remove();
+    for (const span of document.querySelectorAll('.page-redline-del')) { const p = span.parentNode; while (span.firstChild) p.insertBefore(span.firstChild, span); span.remove(); p.normalize(); }
+    document.getElementById('page-redline-host')?.remove();
+    delete window.__pageRedlineLoaded;
+    __run(); await Promise.resolve(); await Promise.resolve();
+  };
+  const dups = document.querySelectorAll('.dup');
+  const phrase = 'target phrase';
+  const selIn = (p) => { const t = p.firstChild; const i = t.data.indexOf(phrase); sel(t, i, t, i + phrase.length); };
+  selIn(dups[1]);
+  r = await __send({ type: 'pr:mark-selection' });
+  ok('context grew beyond the minimum', r.ok && r.edit.prefix.length > 32 && r.edit.suffix.length > 32);
+  const dupSecond = r.edit.id;
+  await reloadScript();
+  let m = document.querySelector(`.page-redline-del[data-pr-id="${dupSecond}"]`);
+  ok('re-anchored to the second identical copy', m && m.closest('.dup') === document.querySelectorAll('.dup')[1]);
+  // mark the first copy too, reload, both must land on their own copy
+  selIn(document.querySelectorAll('.dup')[0]);
+  r = await __send({ type: 'pr:mark-selection' });
+  const dupFirst = r.edit.id;
+  await reloadScript();
+  const c = document.querySelectorAll('.dup');
+  const m1 = document.querySelector(`.page-redline-del[data-pr-id="${dupFirst}"]`), m2 = document.querySelector(`.page-redline-del[data-pr-id="${dupSecond}"]`);
+  ok('both copies anchored to their own paragraph', m1 && m2 && m1.closest('.dup') === c[0] && m2.closest('.dup') === c[1]);
+  // a mark with a short, ambiguous anchor still lands somewhere free when the first copy is taken
+  ok('list shows all anchored', (await __send({ type: 'pr:list' })).edits.every(e => e.anchored));
 
   document.getElementById('out').textContent = out.join('\n') + '\nDONE';
 })().catch(e => { document.getElementById('out').textContent = 'FAIL exception: ' + (e && e.stack || e); });

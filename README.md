@@ -25,8 +25,9 @@ stays in the browser's extension storage.
   note, or remove the mark. Removing restores the page exactly, since marks only wrap the
   page's own text.
 - **Edits survive reloads.** Edits are stored per page and re-applied when you return. They
-  are anchored by the exact text plus its surrounding context, so they survive small layout
-  changes and repeated phrases are told apart. If the text disappears, the edit is listed
+  are anchored by the exact text plus as much surrounding context as it takes to make the
+  spot unique on the page, so small layout changes are tolerated and repeated phrases, even
+  inside repeated paragraphs, are told apart. If the text disappears, the edit is listed
   greyed out until it comes back.
 - **See all edits in the popup.** The toolbar popup lists every edit on the current page:
   old text, replacement, reason and note, all editable inline. Jump to an edit on the page,
