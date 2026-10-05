@@ -6,15 +6,19 @@
   <style>
     :root { color-scheme: light dark; --fg: #1d1d1f; --muted: #6e6e73; --bg: #fff; --line: #d9d9de; --del: #b71c1c; --ins: #1b5e20; --chip: #eef0f3; }
     @media (prefers-color-scheme: dark) { :root { --fg: #ededf0; --muted: #9a9aa3; --bg: #1f1f23; --line: #45454d; --del: #ff8a80; --ins: #a5d6a7; --chip: #2e2e35; } }
-    body { margin: 0; width: 380px; max-height: 560px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--fg); background: var(--bg); }
-    header { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 6px; border-bottom: 1px solid var(--line); }
+    /* The popup must never scroll as a whole: a viewport scrollbar would shrink the fixed width
+       and add a horizontal one. The body is capped in height and only the list scrolls. */
+    html, body { overflow: hidden; }
+    body { margin: 0; width: 380px; max-height: 560px; display: flex; flex-direction: column; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--fg); background: var(--bg); }
+    header { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px 6px; border-bottom: 1px solid var(--line); flex: none; }
     header h1 { font-size: 14px; margin: 0; }
     header .count { color: var(--muted); }
     header .toggle { margin-left: auto; display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: var(--muted); }
     .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; border: 1px solid var(--line); }
     body.hidden-marks li .text { opacity: .55; }
-    .page { padding: 4px 12px 8px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    ul { list-style: none; margin: 0; padding: 0; max-height: 400px; overflow: auto; }
+    .page { padding: 4px 12px 8px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
+    .flash, .empty { flex: none; }
+    ul { list-style: none; margin: 0; padding: 0; flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; }
     li { padding: 8px 12px; border-bottom: 1px solid var(--line); }
     li.orphan { opacity: .6; }
     .del { color: var(--del); text-decoration: line-through; word-break: break-word; }
@@ -23,15 +27,16 @@
     .text { cursor: pointer; }
     .text:hover { text-decoration-color: currentColor; filter: brightness(1.15); }
     .edit { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 6px; }
-    input, select, textarea { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; box-sizing: border-box; width: 100%; }
+    input, select, textarea { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; box-sizing: border-box; width: 100%; min-width: 0; }
     .meta { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
-    .meta select { width: auto; min-width: 120px; }
+    .meta select { width: auto; min-width: 110px; flex: none; }
+    .meta input { flex: 1 1 0; }
     .chip { background: var(--chip); border-radius: 999px; padding: 1px 8px; font-size: 11px; color: var(--muted); }
     .actions { display: flex; gap: 6px; margin-left: auto; }
     button { font: inherit; color: inherit; background: var(--chip); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; }
     button:hover { filter: brightness(1.08); }
     button.danger { color: var(--del); }
-    footer { display: flex; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    footer { display: flex; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--line); flex-wrap: wrap; flex: none; }
     footer .spacer { flex: 1; }
     .empty { padding: 24px 12px; color: var(--muted); text-align: center; }
     .empty code { background: var(--chip); padding: 1px 5px; border-radius: 4px; }
