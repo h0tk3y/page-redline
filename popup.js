@@ -53,6 +53,9 @@ function render() {
     const line = document.createElement('div');
     line.className = 'text';
     const del = document.createElement('span'); del.className = 'del'; del.textContent = e.exact;
+    const reason = reasonOf(e.reason);
+    if (reason) { del.style.color = reason.color; del.style.textDecorationColor = reason.color; }
+    if (state.replacementColor) line.style.setProperty('--ins', state.replacementColor);
     line.appendChild(del);
     if (e.replacement) {
       const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '→';

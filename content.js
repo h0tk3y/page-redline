@@ -288,6 +288,7 @@
       title: document.title,
       reasons: settings.reasons,
       visible: settings.visible,
+      replacementColor: settings.replacementColor,
       edits: edits.map((e) => ({ ...e, anchored: isAnchored(e.id) })),
     };
   }
