@@ -119,6 +119,7 @@
   d3.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   const host = document.getElementById('page-redline-host');
   ok('editor opens on click', host && host.style.display === 'block');
+  ok('focused field is reachable through the shadow root (Vimium insert mode)', document.activeElement === host && host.shadowRoot && host.shadowRoot.activeElement && host.shadowRoot.activeElement.tagName === 'TEXTAREA');
 
   // 10. settings: custom reason color + visibility toggle via storage change
   const custom = { visible: false, replacementColor: '#abcdef', reasons: [{ id: 'verbose', label: 'Wordy', color: '#123456' }] };

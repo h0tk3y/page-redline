@@ -336,7 +336,9 @@
     host = document.createElement('div');
     host.id = HOST_ID;
     host.style.cssText = 'all:initial;position:fixed;top:0;left:0;z-index:2147483647;';
-    shadow = host.attachShadow({ mode: 'closed' });
+    // Open, not closed: Vimium and similar extensions find the focused field by descending
+    // document.activeElement -> shadowRoot.activeElement, which a closed root makes impossible.
+    shadow = host.attachShadow({ mode: 'open' });
     shadow.innerHTML = `
       <style>
         :host { all: initial; }
