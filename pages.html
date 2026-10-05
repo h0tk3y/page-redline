@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Page Redline — All pages</title>
+  <style>
+    :root { color-scheme: light dark; --fg: #1d1d1f; --muted: #6e6e73; --bg: #fff; --card: #fafafa; --line: #d9d9de; --chip: #eef0f3; --del: #b71c1c; --ins: #1b5e20; --accent: #0b57d0; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #ededf0; --muted: #9a9aa3; --bg: #1f1f23; --card: #26262b; --line: #45454d; --chip: #2e2e35; --del: #ff8a80; --ins: #a5d6a7; --accent: #8ab4f8; } }
+    body { margin: 0; font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--fg); background: var(--bg); }
+    main { max-width: 900px; margin: 0 auto; padding: 24px 20px 48px; }
+    header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    h1 { font-size: 20px; margin: 0; }
+    .stats { color: var(--muted); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+    button { font: inherit; color: inherit; background: var(--chip); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+    button:hover { filter: brightness(1.08); }
+    button.danger { color: var(--del); }
+    .flash { color: var(--muted); font-size: 12px; min-height: 16px; margin-bottom: 8px; }
+    .page { border: 1px solid var(--line); border-radius: 10px; background: var(--card); margin-bottom: 12px; overflow: hidden; }
+    .page > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 14px; align-items: center; }
+    .page > summary::-webkit-details-marker { display: none; }
+    .title { font-weight: 600; grid-column: 1; grid-row: 1; }
+    .url { color: var(--muted); font-size: 12px; word-break: break-all; grid-column: 1; grid-row: 2; }
+    .count { color: var(--muted); white-space: nowrap; grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+    .actions { display: flex; gap: 6px; padding: 0 14px 10px; flex-wrap: wrap; }
+    .actions a { color: var(--accent); align-self: center; margin-left: auto; font-size: 12px; }
+    ul { list-style: none; margin: 0; padding: 0 14px 12px; }
+    li { padding: 8px 0; border-top: 1px solid var(--line); }
+    .del { color: var(--del); text-decoration: line-through; }
+    .ins { color: var(--ins); text-decoration: underline; }
+    .arrow { color: var(--muted); margin: 0 4px; }
+    .why { color: var(--muted); font-size: 12px; margin-top: 2px; display: flex; gap: 6px; align-items: center; }
+    .swatch { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--line); display: inline-block; }
+    .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Page Redline — all pages</h1>
+    <span class="stats" id="stats"></span>
+    <div class="toolbar">
+      <button id="export" title="Download every page's edits plus your reasons and colors as a JSON file">Export all…</button>
+      <button id="import" title="Merge edits from a previously exported JSON file">Import…</button>
+      <input type="file" id="file" accept="application/json,.json">
+      <button id="clear-all" class="danger" title="Delete the edits of every page">Clear all edits…</button>
+    </div>
+  </header>
+  <div class="flash" id="flash"></div>
+  <div id="list"></div>
+  <div class="empty" id="empty" hidden>No edits stored on any page yet.</div>
+  <script src="shared.js"></script>
+  <script src="pages.js"></script>
+</main>
+</body>
+</html>

@@ -34,6 +34,11 @@ stays in the browser's extension storage.
   remove one, clear all, or copy the whole list as Markdown or JSON.
 - **Hide and show.** The toggle in the popup hides every mark on every page, so you can read
   the page as if untouched. Edits are kept while hidden.
+- **All pages in one place.** *All pages…* in the popup opens a screen listing every page
+  that has edits, newest first, with its edits, an *Open page* button and per-page Markdown
+  copy and delete. From there you can **export everything** to a JSON file (edits plus your
+  reasons and colors), **import** such a file on another machine (merged by edit id, so
+  re-importing is harmless), or **clear all edits** on all pages.
 - **Your own reasons and colors.** The settings page lets you rename, recolor, reorder, add
   and remove reasons, and choose the replacement color (green by default), with a live
   preview.
@@ -92,6 +97,9 @@ to be signed through addons.mozilla.org (free, "unlisted" self-distribution); th
    - ~~Plugins are declared in the settings file, never in a build file.~~ (remove) — _Duplicate; Already said in the first sentence._
    ```
 5. **Reasons…** in the popup (or the extension's options page) opens the settings.
+6. **All pages…** in the popup lists every page with edits, with export, import and clear-all.
+
+![The all-pages screen listing a page with its edits and the export, import and clear-all buttons](docs/all-pages.png)
 
 ### After updating the extension
 
@@ -102,8 +110,9 @@ look up to date while the rest is stale.
 
 ## Privacy
 
-Edits and settings are stored with the browser's extension storage on your machine only.
-The extension makes no network requests. It asks for access to all sites so that the
+Edits and settings are stored with the browser's extension storage on your machine only,
+along with each page's URL and title. The extension makes no network requests; the only way
+data leaves the browser is the export file you download yourself. It asks for access to all sites so that the
 context-menu entry works on any page.
 
 ## Development
@@ -119,6 +128,7 @@ Plain JavaScript, no build step.
 - `content.js` / `content.css` — marking, inline editor (shadow DOM), storage, anchoring.
 - `popup.html` / `popup.js` — the edit list and the show/hide toggle.
 - `options.html` / `options.js` — the settings page.
+- `pages.html` / `pages.js` — all pages with edits; export, import, clear all.
 
 ### Tests
 

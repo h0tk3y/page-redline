@@ -12,6 +12,7 @@
         local: {
           get: async (k) => Object.fromEntries((Array.isArray(k) ? k : [k]).map((x) => [x, store[x]])),
           set: async (obj) => { Object.assign(store, JSON.parse(JSON.stringify(obj))); },
+          remove: async (keys) => { for (const k of (Array.isArray(keys) ? keys : [keys])) delete store[k]; },
         },
         onChanged: { addListener: (fn) => (window.__onChanged = fn) },
       },
@@ -55,6 +56,9 @@
   ok('mark spanning <b> ok', r.ok && r.edit.exact === 'quick brown fox jumps');
   ok('three del spans', document.querySelectorAll('.page-redline-del').length === 3);
   ok('page text unchanged by marking', text() === before);
+
+  const pageKey = location.origin + location.pathname + location.search;
+  ok('page meta stored with title', __store['meta:' + pageKey] && __store['meta:' + pageKey].title === 'Smoke' && __store['page:' + pageKey].length === 1);
 
   // 2. set replacement + reason
   r = await __send({ type: 'pr:update', id: r.edit.id, patch: { replacement: 'fast fox leaps', reason: 'verbose', note: 'tighten' } });
@@ -170,6 +174,10 @@
   ok('both copies anchored to their own paragraph', m1 && m2 && m1.closest('.dup') === c[0] && m2.closest('.dup') === c[1]);
   // a mark with a short, ambiguous anchor still lands somewhere free when the first copy is taken
   ok('list shows all anchored', (await __send({ type: 'pr:list' })).edits.every(e => e.anchored));
+
+  // 13. clearing the page removes its storage keys entirely
+  await __send({ type: 'pr:clear' });
+  ok('clear removes page and meta keys', !('page:' + pageKey in __store) && !('meta:' + pageKey in __store));
 
   document.getElementById('out').textContent = out.join('\n') + '\nDONE';
 })().catch(e => { document.getElementById('out').textContent = 'FAIL exception: ' + (e && e.stack || e); });

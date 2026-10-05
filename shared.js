@@ -34,5 +34,22 @@
     return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
-  globalThis.PageRedlineShared = { SETTINGS_KEY, DEFAULT_REASONS, DEFAULT_REPLACEMENT_COLOR, normalizeSettings, newReasonId };
+  const PAGE_PREFIX = 'page:';
+  const META_PREFIX = 'meta:';
+  const EXPORT_FORMAT = 'page-redline/1';
+
+  // Groups raw storage into pages: [{ key, url, title, updatedAt, edits }], newest first.
+  function pagesFromStorage(all) {
+    const pages = [];
+    for (const [k, v] of Object.entries(all)) {
+      if (!k.startsWith(PAGE_PREFIX) || !Array.isArray(v) || !v.length) continue;
+      const url = k.slice(PAGE_PREFIX.length);
+      const meta = all[META_PREFIX + url] || {};
+      pages.push({ key: url, url, title: typeof meta.title === 'string' ? meta.title : '', updatedAt: meta.updatedAt || Math.max(0, ...v.map((e) => e.createdAt || 0)), edits: v });
+    }
+    pages.sort((a, b) => b.updatedAt - a.updatedAt);
+    return pages;
+  }
+
+  globalThis.PageRedlineShared = { SETTINGS_KEY, PAGE_PREFIX, META_PREFIX, EXPORT_FORMAT, DEFAULT_REASONS, DEFAULT_REPLACEMENT_COLOR, normalizeSettings, newReasonId, pagesFromStorage };
 })();

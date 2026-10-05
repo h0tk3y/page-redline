@@ -69,12 +69,16 @@ try {
     log('reload page -> edits re-anchored:', (await page.send('Page.reload'), await sleep(1500), await pev('document.querySelectorAll(".page-redline-del").length')));
     log('storage keys:', await ev('chrome.storage.local.get(null).then(o => Object.keys(o))'));
     // popup + options pages
-    for (const f of ['popup.html', 'options.html']) {
+    for (const f of ['popup.html', 'options.html', 'pages.html']) {
       const t = await (await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extId}/${f}`, { method: 'PUT' })).json();
       const c = await connect(t.webSocketDebuggerUrl); await c.send('Runtime.enable'); await sleep(1200);
       const errs = c.events.filter(e => e.method === 'Runtime.exceptionThrown').map(e => e.params.exceptionDetails.exception?.description?.slice(0, 200));
       const body = await c.send('Runtime.evaluate', { expression: 'document.body.innerText.slice(0, 160).replace(/\\n+/g, " | ")', returnByValue: true });
       log(`${f}: errors=${JSON.stringify(errs)} text=${JSON.stringify(body.result?.result?.value)}`);
+      if (f === 'pages.html') {
+        const imp = await c.send('Runtime.evaluate', { expression: `importFile(new File([JSON.stringify({ format: 'page-redline/1', pages: [{ url: 'https://example.test/doc', title: 'Imported doc', edits: [{ id: 'imp1', exact: 'foo', prefix: '', suffix: '', replacement: 'bar', reason: 'zzz', note: '', createdAt: 1 }] }], settings: { reasons: [{ id: 'zzz', label: 'Imported reason', color: '#112233' }] } })], 'x.json')).then(() => document.getElementById('stats').textContent + ' / ' + document.getElementById('flash').textContent)`, awaitPromise: true, returnByValue: true });
+        log('  import:', JSON.stringify(imp.result?.result?.value ?? imp.result?.exceptionDetails?.text));
+      }
       if (f === 'popup.html') log('  openOptionsPage:', JSON.stringify((await c.send('Runtime.evaluate', { expression: 'chrome.runtime.openOptionsPage().then(() => "ok", e => "ERR " + e.message)', awaitPromise: true, returnByValue: true })).result?.result?.value));
       c.close();
     }

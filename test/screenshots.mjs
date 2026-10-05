@@ -68,6 +68,14 @@ try {
   await popup.evaluate(`tabId = ${tabId}; refresh()`); await sleep(500);
   await popup.shot('popup.png', 380, 470);
   popup.close();
+  // all-pages screen
+  const at = await http(`/json/new?chrome-extension://${extId}/pages.html`, { method: 'PUT' });
+  const allp = await connect(at.webSocketDebuggerUrl);
+  await allp.send('Page.enable'); await allp.send('Runtime.enable'); await sleep(800);
+  await allp.evaluate('document.querySelector("details").open = true');
+  await sleep(200);
+  await allp.shot('all-pages.png', 900, 560);
+  allp.close();
   // options page
   const ot = await http(`/json/new?chrome-extension://${extId}/options.html`, { method: 'PUT' });
   const options = await connect(ot.webSocketDebuggerUrl);

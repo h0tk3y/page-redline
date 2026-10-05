@@ -24,7 +24,8 @@
   const reasonLabel = (id) => { const r = reasonOf(id); return r ? r.label : id ? `${id} (removed reason)` : ''; };
 
   const pageKey = location.origin + location.pathname + location.search;
-  const storageKey = 'page:' + pageKey;
+  const storageKey = shared.PAGE_PREFIX + pageKey;
+  const metaKey = shared.META_PREFIX + pageKey;
   let edits = []; // { id, exact, prefix, suffix, replacement, reason, note, createdAt }
   let lastContextRange = null;
 
@@ -46,7 +47,8 @@
     else el.style.removeProperty('--pr-color');
   }
   async function save() {
-    await api.storage.local.set({ [storageKey]: edits });
+    if (!edits.length) { await api.storage.local.remove([storageKey, metaKey]); return; }
+    await api.storage.local.set({ [storageKey]: edits, [metaKey]: { title: document.title, updatedAt: Date.now() } });
   }
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 

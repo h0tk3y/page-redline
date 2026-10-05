@@ -37,7 +37,7 @@ function render() {
   $('#page').textContent = state.title || state.url;
   $('#page').title = state.url;
   $('#count').textContent = edits.length ? `${edits.length} edit${edits.length === 1 ? '' : 's'}` : '';
-  $('#footer').hidden = edits.length === 0;
+  for (const id of ['copy-md', 'copy-json', 'clear']) $('#' + id).hidden = edits.length === 0;
   $('#empty').hidden = edits.length > 0;
   if (!edits.length) {
     $('#empty').innerHTML = 'No edits on this page yet.<br><br>Select text on the page, right-click, and choose <code>Mark as invalid…</code>.';
@@ -131,7 +131,7 @@ async function refresh() {
     state = null;
     $('#list').textContent = '';
     $('#count').textContent = '';
-    $('#footer').hidden = true;
+    for (const id of ['copy-md', 'copy-json', 'clear']) $('#' + id).hidden = true;
     $('#empty').hidden = false;
     $('#empty').innerHTML = 'Page Redline is not running on this page.<br><br>It cannot run on browser pages or extension stores. In Firefox, also check that the extension is allowed to access this site (toolbar icon → Permissions), then reload the page.';
   }
@@ -152,6 +152,7 @@ api.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes[shared.SETTINGS_KEY]) { loadSettings(); refresh(); }
 });
 $('#reasons').addEventListener('click', () => api.runtime.openOptionsPage());
+$('#all-pages').addEventListener('click', () => { api.tabs.create({ url: api.runtime.getURL('pages.html') }); window.close(); });
 
 $('#copy-md').addEventListener('click', async () => { await navigator.clipboard.writeText(toMarkdown()); flash('Copied as Markdown.'); });
 $('#copy-json').addEventListener('click', async () => {
