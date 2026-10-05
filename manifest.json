@@ -61,5 +61,13 @@
   "options_ui": {
     "page": "options.html",
     "open_in_tab": false
+  },
+  "commands": {
+    "mark-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+M"
+      },
+      "description": "Mark the selected text as invalid"
+    }
   }
 }

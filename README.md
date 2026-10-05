@@ -12,9 +12,9 @@ stays in the browser's extension storage.
 
 ## Features
 
-- **Mark text as invalid.** Select any text on a page, right-click, choose *Mark as invalid…*.
-  The selection is struck through. Selections may span links, bold text and other inline
-  markup.
+- **Mark text as invalid.** Select any text on a page, right-click, choose *Mark as invalid…*,
+  or press **Alt+Shift+M**. The selection is struck through. Selections may span links, bold
+  text and other inline markup.
 - **Show the replacement inline.** Type the new wording and it is shown immediately after the
   struck text, underlined in the replacement color. Leave it empty to only strike through.
 - **Record the reason.** Pick a reason (*Too verbose*, *Unclear*, *Incorrect*, *Duplicate*,
@@ -76,7 +76,9 @@ to be signed through addons.mozilla.org (free, "unlisted" self-distribution); th
 
 ## Using it
 
-1. Select text on the page, right-click, choose **Mark as invalid…**.
+1. Select text on the page, then right-click and choose **Mark as invalid…**, or press
+   **Alt+Shift+M**. The shortcut can be changed at `chrome://extensions/shortcuts` or, in
+   Firefox, under *Manage Extension Shortcuts* on the add-ons page.
 2. In the editor that opens, type the replacement, pick a reason, add a note.
    **Enter** saves, **Esc** closes.
 3. Click a red or colored mark at any time to edit or remove it.
@@ -109,7 +111,8 @@ Plain JavaScript, no build step.
 
 - `manifest.json` — Manifest V3. `background.scripts` is for Firefox, `background.service_worker`
   for Chrome; each browser ignores the other key (Chrome logs a warning).
-- `background.js` — registers the context-menu entry and forwards it to the content script.
+- `background.js` — the context-menu entry and the keyboard shortcut, both forwarded to the
+  content script.
 - `shared.js` — settings schema (visibility, reasons with colors, replacement color, last
   reason) and defaults.
 - `content.js` / `content.css` — marking, inline editor (shadow DOM), storage, anchoring.
