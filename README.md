@@ -17,6 +17,13 @@ stays in the browser's extension storage.
   text and other inline markup.
 - **Show the replacement inline.** Type the new wording and it is shown immediately after the
   struck text, underlined in the replacement color. Leave it empty to only strike through.
+- **Add a note without changing anything.** Select text, choose *Add a note…* (or press
+  **Alt+Shift+N**) and type the note. The text is highlighted, not struck, in the reason's
+  color. Hover to read the note, click to open it. A single link in the card turns a note
+  into a strikethrough or a strikethrough into a note, keeping the text and reason.
+- **See where the notes are.** A struck-through mark that carries a note shows a small ✎
+  badge after it, in the mark's color, with the note as its tooltip. The popup shows the
+  same badge next to such edits.
 - **Record the reason.** Pick a reason (*Too verbose*, *Unclear*, *Incorrect*, *Duplicate*,
   *Outdated*, *Off-topic*, *Style / tone*, *Other*) and add a free-text note. The struck text
   is tinted with the reason's color, so the kind of problem is visible at a glance. The
@@ -45,8 +52,11 @@ stays in the browser's extension storage.
 
 <p>
   <img src="docs/page-editor.png" alt="The inline editor open on a struck-through sentence, with replacement, reason and note fields" width="49%">
-  <img src="docs/popup.png" alt="The toolbar popup listing four edits with their replacements, reasons and notes" width="24%">
-  <img src="docs/options.png" alt="The settings page with the replacement color and the editable list of reasons and colors" width="24%">
+  <img src="docs/page-note.png" alt="The inline editor in note mode on a highlighted sentence, with the note text first and a link to strike the text through instead" width="49%">
+</p>
+<p>
+  <img src="docs/popup.png" alt="The toolbar popup listing edits with their replacements, reasons and notes" width="32%">
+  <img src="docs/options.png" alt="The settings page with the replacement color and the editable list of reasons and colors" width="32%">
 </p>
 
 ## Installation
@@ -82,12 +92,13 @@ to be signed through addons.mozilla.org (free, "unlisted" self-distribution); th
 
 ## Using it
 
-1. Select text on the page, then right-click and choose **Mark as invalid…**, or press
-   **Alt+Shift+M**. The shortcut can be changed at `chrome://extensions/shortcuts` or, in
-   Firefox, under *Manage Extension Shortcuts* on the add-ons page.
-2. In the editor that opens, type the replacement, pick a reason, add a note.
+1. Select text on the page, then right-click and choose **Mark as invalid…** (or press
+   **Alt+Shift+M**) to strike it through, or **Add a note…** (**Alt+Shift+N**) to only attach
+   a note. Shortcuts can be changed at `chrome://extensions/shortcuts` or, in Firefox,
+   under *Manage Extension Shortcuts* on the add-ons page.
+2. In the editor that opens, type the replacement or the note, pick a reason.
    **Enter** saves, **Esc** closes.
-3. Click a red or colored mark at any time to edit or remove it.
+3. Click any mark, or the ✎ badge after it, at any time to edit or remove it.
 4. Open the toolbar popup for the full list. Click an edit's text to jump to it on the
    page; use **Copy Markdown** to paste the list into an issue or a message:
 
@@ -95,6 +106,7 @@ to be signed through addons.mozilla.org (free, "unlisted" self-distribution); th
    - ~~In order to be able to configure the build, you first of all need to~~ → To configure the build, — _Too verbose; Say it in half the words._
    - ~~repositorys~~ → repositories — _Incorrect_
    - ~~Plugins are declared in the settings file, never in a build file.~~ (remove) — _Duplicate; Already said in the first sentence._
+   - ✎ “it contributes a schema that describes the software types” — Link to the schema language page here. _(Style / tone)_
    ```
 5. **Reasons…** in the popup (or the extension's options page) opens the settings.
 6. **All pages…** in the popup lists every page with edits, with export, import and clear-all.

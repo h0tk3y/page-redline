@@ -24,11 +24,7 @@ function flash(text) {
 
 function toMarkdown() {
   const lines = [`# Edits for ${state.title || state.url}`, '', state.url, ''];
-  for (const e of state.edits) {
-    const why = [e.reason && reasonLabel(e.reason), e.note].filter(Boolean).join('; ');
-    const change = e.replacement ? `~~${e.exact}~~ → ${e.replacement}` : `~~${e.exact}~~ (remove)`;
-    lines.push(`- ${change}${why ? ` — _${why}_` : ''}`);
-  }
+  for (const e of state.edits) lines.push(shared.editToMarkdown(e, reasonLabel));
   return lines.join('\n') + '\n';
 }
 
@@ -52,15 +48,24 @@ function render() {
 
     const line = document.createElement('div');
     line.className = 'text';
-    const del = document.createElement('span'); del.className = 'del'; del.textContent = e.exact;
     const reason = reasonOf(e.reason);
-    if (reason) { del.style.color = reason.color; del.style.textDecorationColor = reason.color; }
-    if (state.replacementColor) line.style.setProperty('--ins', state.replacementColor);
-    line.appendChild(del);
-    if (e.replacement) {
-      const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '→';
-      const ins = document.createElement('span'); ins.className = 'ins'; ins.textContent = e.replacement;
-      line.append(arrow, ins);
+    const isNote = shared.isNote(e);
+    if (isNote) {
+      const icon = document.createElement('span'); icon.className = 'note-icon'; icon.textContent = '✎';
+      const txt = document.createElement('span'); txt.className = 'note-text'; txt.textContent = e.exact;
+      if (reason) txt.style.setProperty('--note', reason.color);
+      line.append(icon, txt);
+    } else {
+      const del = document.createElement('span'); del.className = 'del'; del.textContent = e.exact;
+      if (reason) { del.style.color = reason.color; del.style.textDecorationColor = reason.color; }
+      if (state.replacementColor) line.style.setProperty('--ins', state.replacementColor);
+      line.appendChild(del);
+      if (e.replacement) {
+        const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '→';
+        const ins = document.createElement('span'); ins.className = 'ins'; ins.textContent = e.replacement;
+        line.append(arrow, ins);
+      }
+      if (e.note) { const n = document.createElement('span'); n.className = 'has-note'; n.textContent = '✎'; n.title = e.note; line.appendChild(n); }
     }
     line.addEventListener('click', () => send({ type: 'pr:open-editor', id: e.id }).catch(() => {}));
     li.appendChild(line);
@@ -70,6 +75,7 @@ function render() {
     const repl = document.createElement('input');
     repl.placeholder = 'Replacement (empty = strike through only)';
     repl.value = e.replacement || '';
+    if (isNote) repl.hidden = true;
     repl.addEventListener('change', () => update(e.id, { replacement: repl.value }));
     repl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') repl.blur(); });
     const jump = document.createElement('button');
@@ -97,7 +103,7 @@ function render() {
     paint();
     sel.addEventListener('change', () => { paint(); update(e.id, { reason: sel.value }); });
     const note = document.createElement('input');
-    note.placeholder = 'Note…';
+    note.placeholder = isNote ? 'Note text…' : 'Note…';
     note.value = e.note || '';
     note.addEventListener('change', () => update(e.id, { note: note.value }));
     note.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') note.blur(); });

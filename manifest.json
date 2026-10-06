@@ -68,6 +68,12 @@
         "default": "Alt+Shift+M"
       },
       "description": "Mark the selected text as invalid"
+    },
+    "add-note": {
+      "suggested_key": {
+        "default": "Alt+Shift+N"
+      },
+      "description": "Add a note to the selected text"
     }
   }
 }

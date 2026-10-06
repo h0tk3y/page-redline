@@ -23,11 +23,7 @@ async function load() {
 
 function markdownFor(page) {
   const lines = [`# Edits for ${page.title || page.url}`, '', page.url, ''];
-  for (const e of page.edits) {
-    const why = [e.reason && reasonLabel(e.reason), e.note].filter(Boolean).join('; ');
-    const change = e.replacement ? `~~${e.exact}~~ → ${e.replacement}` : `~~${e.exact}~~ (remove)`;
-    lines.push(`- ${change}${why ? ` — _${why}_` : ''}`);
-  }
+  for (const e of page.edits) lines.push(shared.editToMarkdown(e, reasonLabel));
   return lines.join('\n') + '\n';
 }
 
@@ -71,11 +67,18 @@ function render() {
     for (const e of page.edits) {
       const li = document.createElement('li');
       const line = document.createElement('div');
-      const del = document.createElement('span'); del.className = 'del'; del.textContent = e.exact;
       const r = reasonOf(e.reason);
-      if (r) { del.style.color = r.color; del.style.textDecorationColor = r.color; }
-      line.appendChild(del);
-      if (e.replacement) {
+      if (shared.isNote(e)) {
+        const icon = document.createElement('span'); icon.className = 'note-icon'; icon.textContent = '✎';
+        const txt = document.createElement('span'); txt.className = 'note-text'; txt.textContent = e.exact;
+        if (r) txt.style.setProperty('--note', r.color);
+        line.append(icon, txt);
+      } else {
+        const del = document.createElement('span'); del.className = 'del'; del.textContent = e.exact;
+        if (r) { del.style.color = r.color; del.style.textDecorationColor = r.color; }
+        line.appendChild(del);
+      }
+      if (!shared.isNote(e) && e.replacement) {
         const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '→';
         const ins = document.createElement('span'); ins.className = 'ins'; ins.textContent = e.replacement;
         ins.style.color = settings.replacementColor; ins.style.textDecorationColor = settings.replacementColor;

@@ -29,6 +29,36 @@
   outline-offset: 2px;
   transition: outline-color 1.2s ease-out;
 }
+/* Note-only marks: highlighted, not struck. */
+.page-redline-note {
+  --pr-color: #f9a825;
+  background: color-mix(in srgb, var(--pr-color) 30%, transparent) !important;
+  text-decoration: underline dotted !important;
+  text-decoration-color: var(--pr-color) !important;
+  text-decoration-thickness: 2px !important;
+  cursor: pointer !important;
+  border-radius: 2px;
+}
+.page-redline-note:hover {
+  outline: 1px solid var(--pr-color) !important;
+  outline-offset: 1px;
+}
+/* Note indicator on struck-through marks. Content lives in ::before so copied text is clean. */
+.page-redline-badge {
+  --pr-color: #d32f2f;
+  display: inline-block !important;
+  vertical-align: super !important;
+  margin-left: 2px !important;
+  padding: 0 3px !important;
+  border-radius: 3px !important;
+  font: 600 0.65em/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  color: var(--pr-color) !important;
+  background: color-mix(in srgb, var(--pr-color) 22%, transparent) !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  text-decoration: none !important;
+}
+.page-redline-badge::before { content: "✎"; }
 /* Hidden mode: marks become indistinguishable from the page text. */
 html[data-page-redline-hidden] .page-redline-del {
   text-decoration: inherit !important;
@@ -36,6 +66,13 @@ html[data-page-redline-hidden] .page-redline-del {
   cursor: inherit !important;
   outline: none !important;
 }
-html[data-page-redline-hidden] .page-redline-ins {
+html[data-page-redline-hidden] .page-redline-ins,
+html[data-page-redline-hidden] .page-redline-badge {
   display: none !important;
+}
+html[data-page-redline-hidden] .page-redline-note {
+  text-decoration: inherit !important;
+  background: transparent !important;
+  cursor: inherit !important;
+  outline: none !important;
 }

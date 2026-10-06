@@ -43,9 +43,9 @@ try {
   const tabId = await bg.evaluate('chrome.tabs.query({url:"file://*/*"}).then(ts => ts[0].id)');
   const msg = (m) => bg.evaluate(`chrome.tabs.sendMessage(${tabId}, ${JSON.stringify(m)})`);
   // select a phrase by text and mark it
-  const mark = async (phrase, patch) => {
+  const mark = async (phrase, patch, kind = 'edit') => {
     await page.evaluate(`(() => { const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const i = n.data.indexOf(${JSON.stringify(phrase)}); if (i >= 0) { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + ${phrase.length}); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return true; } } return false; })()`);
-    const r = await msg({ type: 'pr:mark-selection' });
+    const r = await msg({ type: 'pr:mark-selection', kind });
     if (!r || !r.ok) throw new Error('mark failed for ' + phrase + ': ' + JSON.stringify(r));
     await msg({ type: 'pr:update', id: r.edit.id, patch });
     return r.edit.id;
@@ -54,12 +54,18 @@ try {
   await mark('repositorys', { replacement: 'repositories', reason: 'incorrect' });
   const dupId = await mark('Plugins are declared in the settings file, never in a build file.', { replacement: '', reason: 'duplicate', note: 'Already said in the first sentence.' });
   await mark('The next page explains', { replacement: 'The next guide explains', reason: 'unclear' });
+  const noteId = await mark('it contributes a schema that describes the software types', { note: 'Link to the schema language page here.', reason: 'style' }, 'note');
   await page.evaluate('document.getElementById("page-redline-host")?.style.setProperty("display","none")');
   await page.shot('page-marks.png', 1000, 620);
   // inline editor open on the duplicate
   await msg({ type: 'pr:open-editor', id: dupId });
   await sleep(400);
   await page.shot('page-editor.png', 1000, 620);
+  await page.evaluate('document.getElementById("page-redline-host")?.style.setProperty("display","none")');
+  // editor in note mode
+  await msg({ type: 'pr:open-editor', id: noteId });
+  await sleep(400);
+  await page.shot('page-note.png', 1000, 620);
   await page.evaluate('document.getElementById("page-redline-host")?.style.setProperty("display","none")');
   // popup, pointed at the demo tab
   const pt = await http(`/json/new?chrome-extension://${extId}/popup.html`, { method: 'PUT' });

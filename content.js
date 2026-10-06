@@ -6,8 +6,11 @@
   window.__pageRedlineLoaded = true;
 
   const api = globalThis.browser ?? globalThis.chrome;
-  const DEL = 'page-redline-del';
-  const INS = 'page-redline-ins';
+  const DEL = 'page-redline-del';   // struck-through mark (kind 'edit')
+  const NOTE = 'page-redline-note'; // highlighted mark (kind 'note')
+  const INS = 'page-redline-ins';   // replacement text after an edit
+  const BADGE = 'page-redline-badge'; // note indicator after an edit
+  const NOTE_FALLBACK_COLOR = '#f9a825';
   const FLASH = 'page-redline-flash';
   const HOST_ID = 'page-redline-host';
   const CTX = 32; // minimum anchor context (chars) on each side
@@ -44,6 +47,7 @@
     if (el.classList.contains(INS)) { el.style.setProperty('--pr-color', settings.replacementColor); return; }
     const r = reasonOf(edit.reason);
     if (r) el.style.setProperty('--pr-color', r.color);
+    else if (isNote(edit)) el.style.setProperty('--pr-color', NOTE_FALLBACK_COLOR);
     else el.style.removeProperty('--pr-color');
   }
   async function save() {
@@ -60,7 +64,7 @@
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
       acceptNode(n) {
         if (n.nodeType === Node.ELEMENT_NODE) {
-          if (SKIP_TAGS.has(n.nodeName.toUpperCase()) || n.classList.contains(INS) || n.id === HOST_ID) {
+          if (SKIP_TAGS.has(n.nodeName.toUpperCase()) || isOwnUi(n)) {
             return NodeFilter.FILTER_REJECT;
           }
           return NodeFilter.FILTER_SKIP;
@@ -142,14 +146,19 @@
   }
 
   // ---------- DOM marks ----------
-  function delSpans(id) { return [...document.querySelectorAll(`.${DEL}[data-pr-id="${id}"]`)]; }
+  const isNote = (edit) => shared.isNote(edit);
+  const isOwnUi = (el) => el.id === HOST_ID || el.classList.contains(INS) || el.classList.contains(BADGE);
+  // The spans wrapping the marked text (struck or highlighted).
+  function delSpans(id) { return [...document.querySelectorAll(`.${DEL}[data-pr-id="${id}"], .${NOTE}[data-pr-id="${id}"]`)]; }
   function insSpan(id) { return document.querySelector(`.${INS}[data-pr-id="${id}"]`); }
+  function badgeSpan(id) { return document.querySelector(`.${BADGE}[data-pr-id="${id}"]`); }
   function isAnchored(id) { return delSpans(id).length > 0; }
 
   function tooltip(edit) {
     const parts = [];
     if (edit.reason) parts.push(reasonLabel(edit.reason));
     if (edit.note) parts.push(edit.note);
+    if (isNote(edit)) return parts.join(' — ') || 'Note';
     parts.push(edit.replacement ? `Replace with: “${edit.replacement}”` : 'Remove');
     return parts.join(' — ');
   }
@@ -170,7 +179,7 @@
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
       acceptNode(n) {
         if (n.nodeType === Node.ELEMENT_NODE) {
-          if (SKIP_TAGS.has(n.nodeName.toUpperCase()) || n.classList.contains(INS) || n.id === HOST_ID) return NodeFilter.FILTER_REJECT;
+          if (SKIP_TAGS.has(n.nodeName.toUpperCase()) || isOwnUi(n)) return NodeFilter.FILTER_REJECT;
           return NodeFilter.FILTER_SKIP;
         }
         return r.intersectsNode(n) && n.data.trim().length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
@@ -183,7 +192,7 @@
     let last = null;
     for (const t of nodes) {
       const span = document.createElement('span');
-      span.className = DEL;
+      span.className = isNote(edit) ? NOTE : DEL;
       span.dataset.prId = edit.id;
       span.title = tooltip(edit);
       applyColor(span, edit);
@@ -191,36 +200,48 @@
       span.appendChild(t);
       last = span;
     }
-    renderIns(edit, last);
+    renderTrailing(edit);
     return true;
   }
 
-  function renderIns(edit, afterEl) {
+  // What follows the marked text: the replacement (edits only) and the note badge
+  // (edits with a note). Notes carry their text in the highlight itself, no badge.
+  function renderTrailing(edit) {
+    const spans = delSpans(edit.id);
+    const lastSpan = spans[spans.length - 1];
     let ins = insSpan(edit.id);
-    if (!edit.replacement) { if (ins) ins.remove(); return; }
-    if (!ins) {
-      const spans = delSpans(edit.id);
-      const anchor = afterEl || spans[spans.length - 1];
-      if (!anchor) return;
-      ins = document.createElement('span');
-      ins.className = INS;
-      ins.dataset.prId = edit.id;
-      anchor.after(ins);
+    if (isNote(edit) || !edit.replacement) { if (ins) ins.remove(); ins = null; }
+    else if (lastSpan) {
+      if (!ins) { ins = document.createElement('span'); ins.className = INS; ins.dataset.prId = edit.id; lastSpan.after(ins); }
+      ins.textContent = edit.replacement;
+      ins.title = tooltip(edit);
+      applyColor(ins, edit);
     }
-    ins.textContent = edit.replacement;
-    ins.title = tooltip(edit);
-    applyColor(ins, edit);
+    let badge = badgeSpan(edit.id);
+    if (isNote(edit) || !edit.note) { if (badge) badge.remove(); }
+    else if (lastSpan) {
+      if (!badge) { badge = document.createElement('span'); badge.className = BADGE; badge.dataset.prId = edit.id; }
+      (ins || lastSpan).after(badge);
+      badge.title = edit.note;
+      applyColor(badge, edit);
+    }
   }
 
   function refreshTitles(edit) {
     for (const s of delSpans(edit.id)) { s.title = tooltip(edit); applyColor(s, edit); }
-    const ins = insSpan(edit.id);
-    if (ins) { ins.title = tooltip(edit); applyColor(ins, edit); }
+    renderTrailing(edit);
+  }
+
+  function reapply(edit) {
+    unmark(edit.id);
+    for (const range of findRanges(edit)) if (applyMark(range, edit)) break;
   }
 
   function unmark(id) {
     const ins = insSpan(id);
     if (ins) ins.remove();
+    const badge = badgeSpan(id);
+    if (badge) badge.remove();
     for (const span of delSpans(id)) {
       const parent = span.parentNode;
       while (span.firstChild) parent.insertBefore(span.firstChild, span);
@@ -238,7 +259,7 @@
   }
 
   // ---------- actions ----------
-  function markSelection() {
+  function markSelection(kind = 'edit') {
     const sel = window.getSelection();
     let range = null;
     if (sel && sel.rangeCount && !sel.isCollapsed) range = sel.getRangeAt(0).cloneRange();
@@ -254,6 +275,7 @@
     const ctx = contextLength(text, s, e);
     const edit = {
       id: uid(),
+      kind: kind === 'note' ? 'note' : 'edit',
       exact: text.slice(s, e),
       prefix: text.slice(Math.max(0, s - ctx), s),
       suffix: text.slice(e, e + ctx),
@@ -284,8 +306,9 @@
       }
     }
     if (typeof patch.note === 'string') edit.note = patch.note.trim();
-    renderIns(edit);
-    refreshTitles(edit);
+    const newKind = patch.kind === 'note' ? 'note' : patch.kind === 'edit' ? 'edit' : null;
+    if (newKind && newKind !== (isNote(edit) ? 'note' : 'edit')) { edit.kind = newKind; reapply(edit); }
+    else refreshTitles(edit);
     save();
     return { ok: true, edit };
   }
@@ -322,7 +345,7 @@
     const spans = delSpans(id);
     if (!spans.length) return { error: 'This edit is not visible on the page (its text was not found).' };
     spans[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
-    const all = [...spans, insSpan(id)].filter(Boolean);
+    const all = [...spans, insSpan(id), badgeSpan(id)].filter(Boolean);
     for (const el of all) el.classList.add(FLASH);
     setTimeout(() => { for (const el of all) el.classList.remove(FLASH); }, 1500);
     return { ok: true };
@@ -346,6 +369,16 @@
           background: #fff; color: #1d1d1f; border: 1px solid #c9c9cf; border-radius: 10px;
           box-shadow: 0 10px 30px rgba(0,0,0,.22); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         .orig { color: #8a1c1c; text-decoration: line-through; margin-bottom: 8px; max-height: 3.9em; overflow: hidden; word-break: break-word; }
+        .card.note-mode .orig { color: inherit; text-decoration: none; background: color-mix(in srgb, var(--note-color, #f9a825) 30%, transparent); border-radius: 3px; padding: 0 2px; }
+        .card.note-mode .repl-block { display: none; }
+        .card { display: flex; flex-direction: column; }
+        .card.note-mode .orig { order: -2; }
+        .card.note-mode .note-block { order: -1; }
+        .card.note-mode .reason-block { order: 0; }
+        .note-block textarea { min-height: 36px; }
+        .card.note-mode .note-block textarea { min-height: 60px; }
+        .convert { margin-top: 8px; font-size: 11px; color: #6e6e73; }
+        .convert a { color: inherit; cursor: pointer; text-decoration: underline; }
         label { display: block; font-weight: 600; margin: 8px 0 4px; }
         textarea, input, select { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; border: 1px solid #b8b8c0; border-radius: 6px; background: #fff; color: inherit; }
         textarea { resize: vertical; min-height: 44px; }
@@ -366,11 +399,19 @@
       </style>
       <div class="card" role="dialog" aria-label="Page Redline edit">
         <div class="orig"></div>
-        <label>Replacement <span style="font-weight:400;color:#6e6e73">(leave empty to just strike through)</span></label>
-        <textarea rows="2" class="repl" placeholder="New text…"></textarea>
-        <label>Reason</label>
-        <div style="display:flex;gap:6px;align-items:center"><span class="swatch"></span><select class="reason"></select></div>
-        <input class="note" type="text" placeholder="Optional note…" style="margin-top:6px">
+        <div class="repl-block">
+          <label>Replacement <span style="font-weight:400;color:#6e6e73">(leave empty to just strike through)</span></label>
+          <textarea rows="2" class="repl" placeholder="New text…"></textarea>
+        </div>
+        <div class="reason-block">
+          <label>Reason</label>
+          <div style="display:flex;gap:6px;align-items:center"><span class="swatch"></span><select class="reason"></select></div>
+        </div>
+        <div class="note-block">
+          <label class="note-label">Note</label>
+          <textarea rows="1" class="note" placeholder="Optional note…"></textarea>
+        </div>
+        <div class="convert"><a class="convert-link"></a></div>
         <div class="row">
           <button class="primary save">Save</button>
           <button class="close">Close</button>
@@ -382,6 +423,20 @@
     shadow.querySelector('.save').addEventListener('click', saveFromEditor);
     shadow.querySelector('.close').addEventListener('click', closeEditor);
     shadow.querySelector('.remove').addEventListener('click', () => { if (editingId) removeEdit(editingId); });
+    shadow.querySelector('.convert-link').addEventListener('click', () => {
+      if (!editingId) return;
+      const edit = edits.find((x) => x.id === editingId);
+      if (!edit) return;
+      const id = editingId;
+      // Keep what was typed, flip the kind, reopen in the other mode.
+      updateEdit(id, {
+        replacement: shadow.querySelector('.repl').value,
+        reason: shadow.querySelector('.reason').value,
+        note: shadow.querySelector('.note').value,
+        kind: isNote(edit) ? 'edit' : 'note',
+      });
+      openEditor(id);
+    });
     shadow.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape') { ev.preventDefault(); closeEditor(); }
       else if (ev.key === 'Enter' && !ev.shiftKey && ev.target.tagName !== 'SELECT') { ev.preventDefault(); saveFromEditor(); }
@@ -414,6 +469,7 @@
   function updateSwatch() {
     const r = reasonOf(shadow.querySelector('.reason').value);
     shadow.querySelector('.swatch').style.background = r ? r.color : 'transparent';
+    shadow.querySelector('.card').style.setProperty('--note-color', r ? r.color : NOTE_FALLBACK_COLOR);
   }
 
   function saveFromEditor() {
@@ -432,11 +488,16 @@
     if (!edit || !spans.length || !settings.visible) return;
     ensureEditor();
     editingId = id;
+    const note = isNote(edit);
+    const card = shadow.querySelector('.card');
+    card.classList.toggle('note-mode', note);
+    shadow.querySelector('.note-label').textContent = note ? 'Note' : 'Note (optional)';
+    shadow.querySelector('.convert-link').textContent = note ? 'Strike this text through instead' : 'Make this a note only';
+    shadow.querySelector('.remove').textContent = note ? 'Remove note' : 'Remove mark';
     shadow.querySelector('.orig').textContent = edit.exact;
     shadow.querySelector('.repl').value = edit.replacement || '';
     fillReasonSelect(edit.reason || '');
     shadow.querySelector('.note').value = edit.note || '';
-    const card = shadow.querySelector('.card');
     host.style.display = 'block';
     const rect = spans[spans.length - 1].getBoundingClientRect();
     const cw = card.offsetWidth || 320, ch = card.offsetHeight || 220;
@@ -445,7 +506,7 @@
     if (left + cw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - cw - 8);
     card.style.top = `${top}px`;
     card.style.left = `${left}px`;
-    shadow.querySelector('.repl').focus();
+    shadow.querySelector(note ? '.note' : '.repl').focus();
   }
 
   function closeEditor() {
@@ -462,7 +523,7 @@
   document.addEventListener('click', (ev) => {
     const path = ev.composedPath ? ev.composedPath() : [];
     if (host && path.includes(host)) return;
-    const mark = settings.visible && ev.target instanceof Element ? ev.target.closest(`.${DEL}, .${INS}`) : null;
+    const mark = settings.visible && ev.target instanceof Element ? ev.target.closest(`.${DEL}, .${NOTE}, .${INS}, .${BADGE}`) : null;
     if (mark) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -477,7 +538,7 @@
     let result;
     switch (msg && msg.type) {
       case 'pr:ping': result = { ok: true }; break;
-      case 'pr:mark-selection': result = markSelection(); break;
+      case 'pr:mark-selection': result = markSelection(msg.kind); break;
       case 'pr:list': result = listEdits(); break;
       case 'pr:update': result = updateEdit(msg.id, msg.patch || {}); break;
       case 'pr:remove': result = removeEdit(msg.id); break;

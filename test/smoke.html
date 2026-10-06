@@ -176,7 +176,44 @@
   // a mark with a short, ambiguous anchor still lands somewhere free when the first copy is taken
   ok('list shows all anchored', (await __send({ type: 'pr:list' })).edits.every(e => e.anchored));
 
-  // 13. clearing the page removes its storage keys entirely
+  // 13. notes: highlight without strikethrough, badge on edits with a note, conversion
+  await __send({ type: 'pr:clear' });
+  __store.settings = { reasons: [{ id: 'unclear', label: 'Unclear', color: '#ef6c00' }] };
+  __onChanged({ settings: { newValue: __store.settings } }, 'local');
+  sel(p1.firstChild, 0, p1.firstChild, 3); // "The"
+  r = await __send({ type: 'pr:mark-selection', kind: 'note' });
+  const noteId = r.edit.id;
+  const noteSpan = document.querySelector(`.page-redline-note[data-pr-id="${noteId}"]`);
+  ok('note renders as highlight, not strikethrough', r.ok && r.edit.kind === 'note' && noteSpan && noteSpan.textContent === 'The' && !document.querySelector(`.page-redline-del[data-pr-id="${noteId}"]`));
+  ok('note without reason uses amber fallback', noteSpan.style.getPropertyValue('--pr-color') === '#f9a825');
+  await __send({ type: 'pr:update', id: noteId, patch: { note: 'Needs a citation', reason: 'unclear', replacement: 'ignored for notes' } });
+  ok('note takes reason color and shows the note as tooltip', noteSpan.style.getPropertyValue('--pr-color') === '#ef6c00' && noteSpan.title === 'Unclear — Needs a citation');
+  ok('note has no replacement span or badge', !document.querySelector(`.page-redline-ins[data-pr-id="${noteId}"]`) && !document.querySelector(`.page-redline-badge[data-pr-id="${noteId}"]`));
+  // an edit with a note gets a badge after its replacement; the badge has no text content
+  sel(p2.firstChild, 0, p2.firstChild, 6); // "Second"
+  r = await __send({ type: 'pr:mark-selection' });
+  const editId = r.edit.id;
+  ok('edit without note has no badge', !document.querySelector(`.page-redline-badge[data-pr-id="${editId}"]`));
+  await __send({ type: 'pr:update', id: editId, patch: { note: 'Check this', replacement: '2nd' } });
+  const badge = document.querySelector(`.page-redline-badge[data-pr-id="${editId}"]`);
+  ok('edit with note gets a badge after the replacement', badge && badge.previousSibling.classList.contains('page-redline-ins') && badge.title === 'Check this' && badge.textContent === '');
+  ok('badge excluded from anchor text', (await __send({ type: 'pr:list' })).edits.every(e => e.anchored) && !document.getElementById('a').textContent.includes('✎'));
+  await __send({ type: 'pr:update', id: editId, patch: { note: '' } });
+  ok('badge removed when note cleared', !document.querySelector(`.page-redline-badge[data-pr-id="${editId}"]`));
+  // convert note -> edit and back, keeping text and reason, surviving reload
+  await __send({ type: 'pr:update', id: noteId, patch: { kind: 'edit' } });
+  ok('note converted to edit', document.querySelector(`.page-redline-del[data-pr-id="${noteId}"]`) && !document.querySelector(`.page-redline-note[data-pr-id="${noteId}"]`) && document.querySelector(`.page-redline-badge[data-pr-id="${noteId}"]`));
+  await __send({ type: 'pr:update', id: noteId, patch: { kind: 'note' } });
+  await reloadScript();
+  // the editor opens in note mode with the note's own text, not a stale one
+  await __send({ type: 'pr:open-editor', id: noteId });
+  const sh = document.getElementById('page-redline-host').shadowRoot;
+  ok('editor note mode shows this note', sh.querySelector('.card').classList.contains('note-mode') && sh.querySelector('textarea.note').value === 'Needs a citation' && sh.activeElement === sh.querySelector('textarea.note'));
+  sh.querySelector('.close').click();
+  ok('note survives reload as a note', document.querySelector(`.page-redline-note[data-pr-id="${noteId}"]`)?.textContent === 'The');
+  ok('markdown export distinguishes notes', PageRedlineShared.editToMarkdown({ kind: 'note', exact: 'The', note: 'Needs a citation', reason: 'unclear' }, () => 'Unclear') === '- ✎ “The” — Needs a citation _(Unclear)_');
+
+  // 14. clearing the page removes its storage keys entirely
   await __send({ type: 'pr:clear' });
   ok('clear removes page and meta keys', !('page:' + pageKey in __store) && !('meta:' + pageKey in __store));
 

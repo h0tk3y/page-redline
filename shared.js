@@ -51,5 +51,19 @@
     return pages;
   }
 
-  globalThis.PageRedlineShared = { SETTINGS_KEY, PAGE_PREFIX, META_PREFIX, EXPORT_FORMAT, DEFAULT_REASONS, DEFAULT_REPLACEMENT_COLOR, normalizeSettings, newReasonId, pagesFromStorage };
+  const isNote = (e) => e && e.kind === 'note';
+
+  // One Markdown bullet per mark. `label(reasonId)` resolves the reason's display name.
+  function editToMarkdown(e, label) {
+    const reason = e.reason ? label(e.reason) : '';
+    if (isNote(e)) {
+      const why = reason ? ` _(${reason})_` : '';
+      return `- ✎ “${e.exact}” — ${e.note || '(no note)'}${why}`;
+    }
+    const why = [reason, e.note].filter(Boolean).join('; ');
+    const change = e.replacement ? `~~${e.exact}~~ → ${e.replacement}` : `~~${e.exact}~~ (remove)`;
+    return `- ${change}${why ? ` — _${why}_` : ''}`;
+  }
+
+  globalThis.PageRedlineShared = { isNote, editToMarkdown, SETTINGS_KEY, PAGE_PREFIX, META_PREFIX, EXPORT_FORMAT, DEFAULT_REASONS, DEFAULT_REPLACEMENT_COLOR, normalizeSettings, newReasonId, pagesFromStorage };
 })();
