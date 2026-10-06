@@ -67,7 +67,10 @@ function render() {
       }
       if (e.note) { const n = document.createElement('span'); n.className = 'has-note'; n.textContent = '✎'; n.title = e.note; line.appendChild(n); }
     }
-    line.addEventListener('click', () => send({ type: 'pr:open-editor', id: e.id }).catch(() => {}));
+    // Hands off to the page (scrolls there and opens the editor), so close the popup: Firefox
+    // otherwise leaves the panel open while focus is in the page, and the next toolbar click
+    // then toggles it closed instead of opening it.
+    line.addEventListener('click', () => send({ type: 'pr:open-editor', id: e.id }).catch(() => {}).finally(() => window.close()));
     li.appendChild(line);
 
     const edit = document.createElement('div');
@@ -157,7 +160,7 @@ $('#visible').addEventListener('change', async () => {
 api.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes[shared.SETTINGS_KEY]) { loadSettings(); refresh(); }
 });
-$('#reasons').addEventListener('click', () => api.runtime.openOptionsPage());
+$('#reasons').addEventListener('click', () => { api.runtime.openOptionsPage(); window.close(); });
 $('#all-pages').addEventListener('click', () => { api.tabs.create({ url: api.runtime.getURL('pages.html') }); window.close(); });
 
 $('#copy-md').addEventListener('click', async () => { await navigator.clipboard.writeText(toMarkdown()); flash('Copied as Markdown.'); });
