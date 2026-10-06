@@ -98,8 +98,8 @@ to be signed through addons.mozilla.org (free, "unlisted" self-distribution); th
    strikethrough and note, so **Alt+Shift+M twice** turns the new mark into a note. Shortcuts
    can be changed at `chrome://extensions/shortcuts` or, in Firefox, under *Manage Extension
    Shortcuts* on the add-ons page.
-2. In the editor that opens, type the replacement or the note, pick a reason.
-   **Enter** saves, **Esc** closes.
+2. In the card that opens, type the replacement or the note and pick a reason. An empty
+   replacement keeps just the strikethrough. **Enter** saves, **Esc** closes.
 3. Click any mark, or the ✎ badge after it, at any time to edit or remove it.
 4. Open the toolbar popup for the full list. Click an edit's text to jump to it on the
    page; use **Copy Markdown** to paste the list into an issue or a message:

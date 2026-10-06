@@ -73,7 +73,7 @@ function render() {
     const edit = document.createElement('div');
     edit.className = 'edit';
     const repl = document.createElement('input');
-    repl.placeholder = 'Replacement (empty = strike through only)';
+    repl.placeholder = 'Replacement';
     repl.value = e.replacement || '';
     if (isNote) repl.hidden = true;
     repl.addEventListener('change', () => update(e.id, { replacement: repl.value }));
@@ -92,7 +92,7 @@ function render() {
     swatch.className = 'swatch';
     const sel = document.createElement('select');
     const paint = () => { const r = reasonOf(sel.value); swatch.style.background = r ? r.color : 'transparent'; };
-    const none = document.createElement('option'); none.value = ''; none.textContent = '— no reason —'; sel.appendChild(none);
+    const none = document.createElement('option'); none.value = ''; none.textContent = 'No reason'; sel.appendChild(none);
     for (const r of state.reasons) {
       const o = document.createElement('option'); o.value = r.id; o.textContent = r.label; sel.appendChild(o);
     }
@@ -103,7 +103,7 @@ function render() {
     paint();
     sel.addEventListener('change', () => { paint(); update(e.id, { reason: sel.value }); });
     const note = document.createElement('input');
-    note.placeholder = isNote ? 'Note text…' : 'Note…';
+    note.placeholder = 'Note';
     note.value = e.note || '';
     note.addEventListener('change', () => update(e.id, { note: note.value }));
     note.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') note.blur(); });

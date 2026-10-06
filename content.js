@@ -393,7 +393,6 @@
         button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid #b8b8c0; background: #f4f4f6; color: inherit; cursor: pointer; }
         button.primary { background: #2e7d32; border-color: #2e7d32; color: #fff; }
         button.danger { color: #b71c1c; margin-left: auto; }
-        .hint { margin-top: 8px; color: #6e6e73; font-size: 11px; }
         .swatch { width: 14px; height: 14px; border-radius: 50%; flex: none; border: 1px solid rgba(0,0,0,.2); background: transparent; }
         @media (prefers-color-scheme: dark) {
           .card { background: #1f1f23; color: #ededf0; border-color: #45454d; }
@@ -401,30 +400,28 @@
           textarea, input, select { background: #2a2a30; border-color: #55555e; }
           button { background: #2e2e35; border-color: #55555e; }
           button.danger { color: #ff8a80; }
-          .hint { color: #9a9aa3; }
         }
       </style>
       <div class="card" role="dialog" aria-label="Page Redline edit">
         <div class="orig"></div>
         <div class="repl-block">
-          <label>Replacement <span style="font-weight:400;color:#6e6e73">(leave empty to just strike through)</span></label>
-          <textarea rows="2" class="repl" placeholder="New text…"></textarea>
+          <label>Replacement</label>
+          <textarea rows="2" class="repl" placeholder="Optional"></textarea>
         </div>
         <div class="reason-block">
           <label>Reason</label>
           <div style="display:flex;gap:6px;align-items:center"><span class="swatch"></span><select class="reason"></select></div>
         </div>
         <div class="note-block">
-          <label class="note-label">Note</label>
-          <textarea rows="1" class="note" placeholder="Optional note…"></textarea>
+          <label>Note</label>
+          <textarea rows="1" class="note"></textarea>
         </div>
         <div class="convert"><a class="convert-link"></a></div>
         <div class="row">
-          <button class="primary save">Save</button>
-          <button class="close">Close</button>
-          <button class="danger remove">Remove mark</button>
+          <button class="primary save" title="Enter">Save</button>
+          <button class="close" title="Esc">Close</button>
+          <button class="danger remove">Remove</button>
         </div>
-        <div class="hint">Enter saves · Esc closes · click any mark to edit it later</div>
       </div>`;
     shadow.querySelector('.reason').addEventListener('change', updateSwatch);
     shadow.querySelector('.save').addEventListener('click', saveFromEditor);
@@ -445,7 +442,7 @@
     const sel = shadow.querySelector('.reason');
     sel.textContent = '';
     const none = document.createElement('option');
-    none.value = ''; none.textContent = '— no reason —';
+    none.value = ''; none.textContent = 'No reason';
     sel.appendChild(none);
     for (const r of settings.reasons) {
       const o = document.createElement('option');
@@ -501,9 +498,8 @@
     const note = isNote(edit);
     const card = shadow.querySelector('.card');
     card.classList.toggle('note-mode', note);
-    shadow.querySelector('.note-label').textContent = note ? 'Note' : 'Note (optional)';
-    shadow.querySelector('.convert-link').textContent = note ? 'Strike this text through instead' : 'Make this a note only';
-    shadow.querySelector('.remove').textContent = note ? 'Remove note' : 'Remove mark';
+    shadow.querySelector('.note').placeholder = note ? '' : 'Optional';
+    shadow.querySelector('.convert-link').textContent = note ? 'Strike through instead' : 'Note only';
     shadow.querySelector('.orig').textContent = edit.exact;
     shadow.querySelector('.repl').value = edit.replacement || '';
     fillReasonSelect(edit.reason || '');
