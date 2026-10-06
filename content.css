@@ -19,8 +19,9 @@
   font: inherit;
   color: inherit;
 }
-.page-redline-del:hover,
-.page-redline-ins:hover {
+/* Hover is applied by the content script to every piece of a mark at once (text spans,
+   replacement, badge), so a mark that spans inline markup lights up as a whole. */
+.page-redline-hover {
   outline: 1px solid var(--pr-color) !important;
   outline-offset: 1px;
 }
@@ -38,10 +39,6 @@
   text-decoration-thickness: 2px !important;
   cursor: pointer !important;
   border-radius: 2px;
-}
-.page-redline-note:hover {
-  outline: 1px solid var(--pr-color) !important;
-  outline-offset: 1px;
 }
 /* Note indicator on struck-through marks. Content lives in ::before so copied text is clean. */
 .page-redline-badge {

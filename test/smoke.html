@@ -229,7 +229,19 @@
   r = await __send({ type: 'pr:mark-selection', kind: 'edit', source: 'menu' });
   ok('menu with the card open creates a new mark instead of flipping', r.ok && !r.toggled && r.edit.exact === 'more words' && document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
 
-  // 15. clearing the page removes its storage keys entirely
+  // 15. hovering any piece of a multi-span mark highlights every piece
+  sel(p1.firstChild, 4, p1.childNodes[2], 6); // "quick " + <b>brown fox</b> + " jumps" -> three spans
+  r = await __send({ type: 'pr:mark-selection' });
+  const hoverId = r.edit.id;
+  await __send({ type: 'pr:update', id: hoverId, patch: { replacement: 'fast fox leaps', note: 'n' } });
+  const pieces = [...document.querySelectorAll(`[data-pr-id="${hoverId}"]`)];
+  const over = (el) => el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+  over(pieces[1]);
+  ok('hover on one span lights up all spans, replacement and badge', pieces.length === 5 && pieces.every(el => el.classList.contains('page-redline-hover')));
+  over(document.getElementById('out'));
+  ok('hover clears when leaving the mark', !document.querySelector('.page-redline-hover'));
+
+  // 16. clearing the page removes its storage keys entirely
   await __send({ type: 'pr:clear' });
   ok('clear removes page and meta keys', !('page:' + pageKey in __store) && !('meta:' + pageKey in __store));
 

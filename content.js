@@ -12,6 +12,7 @@
   const BADGE = 'page-redline-badge'; // note indicator after an edit
   const NOTE_FALLBACK_COLOR = '#f9a825';
   const FLASH = 'page-redline-flash';
+  const HOVER = 'page-redline-hover';
   const HOST_ID = 'page-redline-host';
   const CTX = 32; // minimum anchor context (chars) on each side
   const MAX_CTX = 2048; // grown while the surroundings repeat elsewhere on the page
@@ -238,6 +239,7 @@
   }
 
   function unmark(id) {
+    if (hoveredId === id) hoveredId = null;
     const ins = insSpan(id);
     if (ins) ins.remove();
     const badge = badgeSpan(id);
@@ -519,6 +521,23 @@
     editingId = null;
     if (host) host.style.display = 'none';
   }
+
+  // Every element belonging to a mark: text spans, replacement, badge.
+  function markElements(id) { return [...document.querySelectorAll(`[data-pr-id="${id}"]`)]; }
+
+  // Hover the whole mark, not just the piece under the cursor.
+  let hoveredId = null;
+  function setHover(id) {
+    if (id === hoveredId) return;
+    if (hoveredId) for (const el of markElements(hoveredId)) el.classList.remove(HOVER);
+    hoveredId = id;
+    if (id) for (const el of markElements(id)) el.classList.add(HOVER);
+  }
+  document.addEventListener('mouseover', (ev) => {
+    const mark = settings.visible && ev.target instanceof Element ? ev.target.closest('[data-pr-id]') : null;
+    setHover(mark ? mark.dataset.prId : null);
+  }, true);
+  document.addEventListener('mouseleave', () => setHover(null), true);
 
   // ---------- page events ----------
   document.addEventListener('contextmenu', () => {
