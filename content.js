@@ -259,7 +259,14 @@
   }
 
   // ---------- actions ----------
-  function markSelection(kind = 'edit') {
+  // A shortcut pressed while the editor card is open flips the open mark between
+  // strikethrough and note (so Alt+Shift+M twice yields a note). The context menu never
+  // does this: a right-click leaves the card open, and it should still create a new mark.
+  function markSelection(kind = 'edit', source = 'menu') {
+    if (source === 'shortcut' && editingId && edits.some((x) => x.id === editingId)) {
+      const edit = convertOpenEdit();
+      return { ok: true, edit, toggled: true };
+    }
     const sel = window.getSelection();
     let range = null;
     if (sel && sel.rangeCount && !sel.isCollapsed) range = sel.getRangeAt(0).cloneRange();
@@ -423,20 +430,7 @@
     shadow.querySelector('.save').addEventListener('click', saveFromEditor);
     shadow.querySelector('.close').addEventListener('click', closeEditor);
     shadow.querySelector('.remove').addEventListener('click', () => { if (editingId) removeEdit(editingId); });
-    shadow.querySelector('.convert-link').addEventListener('click', () => {
-      if (!editingId) return;
-      const edit = edits.find((x) => x.id === editingId);
-      if (!edit) return;
-      const id = editingId;
-      // Keep what was typed, flip the kind, reopen in the other mode.
-      updateEdit(id, {
-        replacement: shadow.querySelector('.repl').value,
-        reason: shadow.querySelector('.reason').value,
-        note: shadow.querySelector('.note').value,
-        kind: isNote(edit) ? 'edit' : 'note',
-      });
-      openEditor(id);
-    });
+    shadow.querySelector('.convert-link').addEventListener('click', convertOpenEdit);
     shadow.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape') { ev.preventDefault(); closeEditor(); }
       else if (ev.key === 'Enter' && !ev.shiftKey && ev.target.tagName !== 'SELECT') { ev.preventDefault(); saveFromEditor(); }
@@ -470,6 +464,22 @@
     const r = reasonOf(shadow.querySelector('.reason').value);
     shadow.querySelector('.swatch').style.background = r ? r.color : 'transparent';
     shadow.querySelector('.card').style.setProperty('--note-color', r ? r.color : NOTE_FALLBACK_COLOR);
+  }
+
+  // Flip the open mark's kind, keeping whatever was typed, and reopen the card in the other mode.
+  function convertOpenEdit() {
+    if (!editingId) return null;
+    const edit = edits.find((x) => x.id === editingId);
+    if (!edit) return null;
+    const id = editingId;
+    updateEdit(id, {
+      replacement: shadow.querySelector('.repl').value,
+      reason: shadow.querySelector('.reason').value,
+      note: shadow.querySelector('.note').value,
+      kind: isNote(edit) ? 'edit' : 'note',
+    });
+    openEditor(id);
+    return edit;
   }
 
   function saveFromEditor() {
@@ -538,7 +548,7 @@
     let result;
     switch (msg && msg.type) {
       case 'pr:ping': result = { ok: true }; break;
-      case 'pr:mark-selection': result = markSelection(msg.kind); break;
+      case 'pr:mark-selection': result = markSelection(msg.kind, msg.source); break;
       case 'pr:list': result = listEdits(); break;
       case 'pr:update': result = updateEdit(msg.id, msg.patch || {}); break;
       case 'pr:remove': result = removeEdit(msg.id); break;

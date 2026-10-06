@@ -213,7 +213,23 @@
   ok('note survives reload as a note', document.querySelector(`.page-redline-note[data-pr-id="${noteId}"]`)?.textContent === 'The');
   ok('markdown export distinguishes notes', PageRedlineShared.editToMarkdown({ kind: 'note', exact: 'The', note: 'Needs a citation', reason: 'unclear' }, () => 'Unclear') === '- ✎ “The” — Needs a citation _(Unclear)_');
 
-  // 14. clearing the page removes its storage keys entirely
+  // 14. a shortcut pressed while the card is open flips the open mark's kind; the menu does not
+  const selText = (root, phrase) => { const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const i = n.data.indexOf(phrase); if (i >= 0 && !n.parentElement.closest('.page-redline-del,.page-redline-note,.page-redline-ins')) { sel(n, i, n, i + phrase.length); return true; } } return false; };
+  await __send({ type: 'pr:remove', id: noteId });
+  ok('selected free text for the shortcut test', selText(p1, 'lazy dog'));
+  r = await __send({ type: 'pr:mark-selection', kind: 'edit', source: 'shortcut' });
+  const tId = r.edit.id;
+  ok('shortcut creates an edit and opens the card', r.ok && r.edit.kind === 'edit' && document.getElementById('page-redline-host').style.display === 'block');
+  sh.querySelector('textarea.note').value = 'typed before flipping';
+  r = await __send({ type: 'pr:mark-selection', kind: 'edit', source: 'shortcut' });
+  ok('second press flips it to a note, keeping typed text', r.toggled && document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`) && sh.querySelector('.card').classList.contains('note-mode') && sh.querySelector('textarea.note').value === 'typed before flipping');
+  r = await __send({ type: 'pr:mark-selection', kind: 'note', source: 'shortcut' });
+  ok('either shortcut flips back', r.toggled && document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
+  ok('selected free text while the card is open', selText(p2, 'more words'));
+  r = await __send({ type: 'pr:mark-selection', kind: 'edit', source: 'menu' });
+  ok('menu with the card open creates a new mark instead of flipping', r.ok && !r.toggled && r.edit.exact === 'more words' && document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
+
+  // 15. clearing the page removes its storage keys entirely
   await __send({ type: 'pr:clear' });
   ok('clear removes page and meta keys', !('page:' + pageKey in __store) && !('meta:' + pageKey in __store));
 

@@ -14,9 +14,9 @@ function createMenu() {
 api.runtime.onInstalled.addListener(createMenu);
 if (api.runtime.onStartup) api.runtime.onStartup.addListener(createMenu);
 
-function markSelection(tabId, frameId, kind = 'edit') {
+function markSelection(tabId, frameId, kind = 'edit', source = 'menu') {
   const options = frameId != null ? { frameId } : undefined;
-  const p = api.tabs.sendMessage(tabId, { type: 'pr:mark-selection', kind }, options);
+  const p = api.tabs.sendMessage(tabId, { type: 'pr:mark-selection', kind, source }, options);
   if (p && typeof p.catch === 'function') p.catch(() => {});
 }
 
@@ -31,7 +31,7 @@ if (api.commands) {
   api.commands.onCommand.addListener((command, tab) => {
     const kind = command === 'mark-selection' ? 'edit' : command === 'add-note' ? 'note' : null;
     if (!kind) return;
-    if (tab && tab.id != null) { markSelection(tab.id, undefined, kind); return; }
-    api.tabs.query({ active: true, currentWindow: true }).then((tabs) => { if (tabs[0]) markSelection(tabs[0].id, undefined, kind); });
+    if (tab && tab.id != null) { markSelection(tab.id, undefined, kind, 'shortcut'); return; }
+    api.tabs.query({ active: true, currentWindow: true }).then((tabs) => { if (tabs[0]) markSelection(tabs[0].id, undefined, kind, 'shortcut'); });
   });
 }

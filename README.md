@@ -94,8 +94,10 @@ to be signed through addons.mozilla.org (free, "unlisted" self-distribution); th
 
 1. Select text on the page, then right-click and choose **Mark as invalid…** (or press
    **Alt+Shift+M**) to strike it through, or **Add a note…** (**Alt+Shift+N**) to only attach
-   a note. Shortcuts can be changed at `chrome://extensions/shortcuts` or, in Firefox,
-   under *Manage Extension Shortcuts* on the add-ons page.
+   a note. While the editor card is open, pressing either shortcut flips that mark between
+   strikethrough and note, so **Alt+Shift+M twice** turns the new mark into a note. Shortcuts
+   can be changed at `chrome://extensions/shortcuts` or, in Firefox, under *Manage Extension
+   Shortcuts* on the add-ons page.
 2. In the editor that opens, type the replacement or the note, pick a reason.
    **Enter** saves, **Esc** closes.
 3. Click any mark, or the ✎ badge after it, at any time to edit or remove it.
