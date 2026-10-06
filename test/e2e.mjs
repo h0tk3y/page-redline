@@ -61,7 +61,8 @@ try {
     log('marks in page DOM:', await pev('document.querySelectorAll(".page-redline-del").length + " del, host=" + !!document.getElementById("page-redline-host")'));
     const tabIdExpr = await ev('chrome.tabs.query({url:"file://*/*"}).then(ts => ts[0].id)');
     log('command registered:', await ev('chrome.commands.getAll().then(cs => cs.map(c => c.name + "=" + c.shortcut).join(","))'));
-    await pev('(() => { const p = document.getElementById("p2"); const r = document.createRange(); r.setStart(p.firstChild, 0); r.setEnd(p.firstChild, 6); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return s.toString(); })()');
+    // Clicking the page closes the open card (a shortcut with the card open would flip that mark instead).
+    await pev('(() => { document.body.click(); const p = document.getElementById("p2"); const r = document.createRange(); r.setStart(p.firstChild, 0); r.setEnd(p.firstChild, 6); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return s.toString(); })()');
     log('mark via shortcut handler:', await ev(`chrome.commands.onCommand.dispatch("mark-selection", { id: ${tabIdExpr} }), new Promise(res => setTimeout(() => res("dispatched"), 400))`));
     log('list (expect n=2: menu + shortcut):', await ev('chrome.tabs.query({url:"file://*/*"}).then(ts => chrome.tabs.sendMessage(ts[0].id, {type:"pr:list"})).then(r => JSON.stringify({n:r.edits.length, visible:r.visible, reasons:r.reasons.length})).catch(e => "ERR " + e.message)'));
     log('toggle visibility via storage:', await ev('chrome.storage.local.get("settings").then(r => { const s = r.settings || {}; s.visible = false; return chrome.storage.local.set({settings: s}); }).then(() => "ok")'));
