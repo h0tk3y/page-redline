@@ -54,6 +54,10 @@ try {
   await mark('repositorys', { replacement: 'repositories', reason: 'incorrect' });
   const dupId = await mark('Plugins are declared in the settings file, never in a build file.', { replacement: '', reason: 'duplicate', note: 'Already said in the first sentence.' });
   await mark('The next page explains', { replacement: 'The next guide explains', reason: 'unclear' });
+  await mark('You do not install it by hand — the', { replacement: 'The', reason: 'verbose' });
+  // a mark across inline <code> elements: select from "task installs" to "arguments" via a range
+  await page.evaluate(`(() => { const ps = [...document.querySelectorAll('p')]; const p = ps.find(x => x.querySelector('code')); const tw = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); let startNode, endNode, so, eo, n; while ((n = tw.nextNode())) { const i = n.data.indexOf('task installs'); if (i >= 0 && !startNode) { startNode = n; so = i; } const j = n.data.indexOf('in the arguments'); if (j >= 0) { endNode = n; eo = j + 'in the arguments'.length; } } const r = document.createRange(); r.setStart(startNode, so); r.setEnd(endNode, eo); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return s.toString(); })()`);
+  { const r = await msg({ type: 'pr:mark-selection' }); await msg({ type: 'pr:update', id: r.edit.id, patch: { replacement: 'task downloads the version you pin in the arguments', reason: 'style', note: 'One sentence, no marker talk.' } }); }
   const noteId = await mark('it contributes a schema that describes the software types', { note: 'Link to the schema language page here.', reason: 'style' }, 'note');
   await page.evaluate('document.getElementById("page-redline-host")?.style.setProperty("display","none")');
   await page.shot('page-marks.png', 1000, 620);

@@ -164,6 +164,20 @@
     return parts.join(' — ');
   }
 
+  // Inline elements may be wrapped whole; anything else is a block boundary we descend into.
+  function isInlineElement(el) {
+    if (SKIP_TAGS.has(el.nodeName.toUpperCase()) || isOwnUi(el)) return false;
+    const d = getComputedStyle(el).display;
+    return d.startsWith('inline') || d === 'contents';
+  }
+  function hasVisibleText(node) {
+    return node.nodeType === Node.TEXT_NODE ? node.data.trim().length > 0 : node.textContent.trim().length > 0;
+  }
+
+  // Wraps the range in as few spans as possible: within each block, one span per run of
+  // fully covered sibling nodes (text and whole inline elements such as <code> or <b>),
+  // splitting only the partially covered text nodes at the two ends. Returns false and
+  // changes nothing if the range is empty or touches an existing mark.
   function applyMark(range, edit) {
     let sc = range.startContainer, so = range.startOffset, ec = range.endContainer, eo = range.endOffset;
     if (ec.nodeType === Node.TEXT_NODE && eo < ec.data.length) ec.splitText(eo);
@@ -175,31 +189,46 @@
     const r = document.createRange();
     r.setStart(sc, so);
     r.setEnd(ec, eo);
-    const root = r.commonAncestorContainer.nodeType === Node.TEXT_NODE ? r.commonAncestorContainer.parentNode : r.commonAncestorContainer;
-    const nodes = [];
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
-      acceptNode(n) {
-        if (n.nodeType === Node.ELEMENT_NODE) {
-          if (SKIP_TAGS.has(n.nodeName.toUpperCase()) || isOwnUi(n)) return NodeFilter.FILTER_REJECT;
-          return NodeFilter.FILTER_SKIP;
+
+    // Collect the runs first, then check for overlap, then wrap: no half-applied marks.
+    const runs = [];
+    const markSelector = `.${DEL}, .${NOTE}, .${INS}, .${BADGE}`;
+    let touchesMark = false;
+    function collect(parent) {
+      let run = [];
+      const flush = () => { if (run.some(hasVisibleText)) runs.push(run); run = []; };
+      for (const child of [...parent.childNodes]) {
+        if (!r.intersectsNode(child)) { flush(); continue; }
+        if (child.nodeType === Node.ELEMENT_NODE && child.matches(markSelector)) { touchesMark = true; return; }
+        const fullyCovered = r.comparePoint(child, 0) >= 0 && (child.nodeType === Node.TEXT_NODE
+          ? r.comparePoint(child, child.data.length) <= 0
+          : r.comparePoint(child.parentNode, [...child.parentNode.childNodes].indexOf(child) + 1) <= 0);
+        if (child.nodeType === Node.TEXT_NODE) {
+          if (fullyCovered && !SKIP_TAGS.has(parent.nodeName.toUpperCase())) run.push(child); else flush();
+        } else if (fullyCovered && isInlineElement(child)) {
+          if (child.querySelector(markSelector)) { touchesMark = true; return; }
+          run.push(child);
+        } else {
+          flush();
+          if (!SKIP_TAGS.has(child.nodeName.toUpperCase()) && !isOwnUi(child)) collect(child);
+          if (touchesMark) return;
         }
-        return r.intersectsNode(n) && n.data.trim().length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-      },
-    });
-    let n;
-    while ((n = walker.nextNode())) nodes.push(n);
-    if (!nodes.length) return false;
-    if (nodes.some((t) => t.parentElement && t.parentElement.closest(`.${DEL}`))) return false; // overlap
-    let last = null;
-    for (const t of nodes) {
+      }
+      flush();
+    }
+    const root = r.commonAncestorContainer.nodeType === Node.TEXT_NODE ? r.commonAncestorContainer.parentNode : r.commonAncestorContainer;
+    if (root.closest && root.closest(markSelector)) return false;
+    collect(root);
+    if (touchesMark || !runs.length) return false;
+
+    for (const run of runs) {
       const span = document.createElement('span');
       span.className = isNote(edit) ? NOTE : DEL;
       span.dataset.prId = edit.id;
       span.title = tooltip(edit);
       applyColor(span, edit);
-      t.parentNode.insertBefore(span, t);
-      span.appendChild(t);
-      last = span;
+      run[0].parentNode.insertBefore(span, run[0]);
+      for (const node of run) span.appendChild(node);
     }
     renderTrailing(edit);
     return true;

@@ -13,6 +13,7 @@
 <p>In order to be able to configure the build, you first of all need to create a settings file in the root directory of the project. The settings file is the file that declares which plugins are applied to the build and it is also the file that lists the projects that make up the build.</p>
 <h2>Declaring plugins</h2>
 <p>Plugins are declared in the settings file. Each plugin is identified by its id, and plugins are resolved from the repositorys that are declared in the same file. Plugins are declared in the settings file, never in a build file.</p>
+<p>You do not install it by hand — the <code>wrapper</code> task installs it by version, so create a <code>settings.gradle</code> marker and run <code>gradle wrapper</code> with the version in the arguments.</p>
 <p>Once a plugin is applied, it contributes a schema that describes the software types that the build files can use. A build file then picks one of those software types and configures it.</p>
 <h2>Next steps</h2>
 <p>The next page explains how to author a declarative plugin and how the schema it contributes shows up in the editor.</p>

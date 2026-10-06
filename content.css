@@ -1,9 +1,16 @@
+/* The strikethrough is painted as a background layer rather than text-decoration: browsers
+   draw decorations only under text runs, so a line-through would break at the padding of
+   nested inline elements (code, links) and jump where their font size differs. A background
+   line is continuous across the whole span. */
 .page-redline-del {
   --pr-color: #d32f2f;
-  text-decoration: line-through !important;
-  text-decoration-color: var(--pr-color) !important;
-  text-decoration-thickness: 2px !important;
-  background: color-mix(in srgb, var(--pr-color) 22%, transparent) !important;
+  --pr-tint: 22%;
+  text-decoration: none !important;
+  background:
+    linear-gradient(to bottom, transparent calc(50% - 1px), var(--pr-color) calc(50% - 1px), var(--pr-color) calc(50% + 1px), transparent calc(50% + 1px)),
+    color-mix(in srgb, var(--pr-color) var(--pr-tint), transparent) !important;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
   cursor: pointer !important;
   border-radius: 2px;
 }
@@ -19,12 +26,20 @@
   font: inherit;
   color: inherit;
 }
-/* Hover is applied by the content script to every piece of a mark at once (text spans,
-   replacement, badge), so a mark that spans inline markup lights up as a whole. */
-.page-redline-hover {
-  outline: 1px solid var(--pr-color) !important;
-  outline-offset: 1px;
+/* Inline elements inside a mark (code, links, emphasis) take the mark's tint instead of
+   their own background, so the highlight reads as one piece. */
+.page-redline-del *,
+.page-redline-note *,
+.page-redline-ins * {
+  background: transparent !important;
 }
+/* Hover is applied by the content script to every piece of a mark at once (text spans,
+   replacement, badge). A deeper tint rather than an outline: nothing to double up where
+   pieces meet. */
+.page-redline-del.page-redline-hover { --pr-tint: 42%; }
+.page-redline-note.page-redline-hover { background: color-mix(in srgb, var(--pr-color) 50%, transparent) !important; }
+.page-redline-ins.page-redline-hover { background: color-mix(in srgb, var(--pr-color) 30%, transparent) !important; }
+.page-redline-badge.page-redline-hover { background: color-mix(in srgb, var(--pr-color) 42%, transparent) !important; }
 .page-redline-flash {
   outline: 3px solid #f9a825 !important;
   outline-offset: 2px;

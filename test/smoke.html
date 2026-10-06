@@ -27,6 +27,8 @@
   <h2>Heading one</h2>
   <p id="p1">The quick <b>brown fox</b> jumps over the lazy dog. The quick brown fox again.</p>
   <p id="p2">Second paragraph with <a href="#x">a link inside</a> and more words after it.</p>
+  <p id="p3">Run the <code>wrapper</code> task, then edit <code>settings.gradle</code> and <em>commit</em> both files.</p>
+  <p id="p4">A fourth paragraph that a selection can reach into.</p>
   <section id="boiler">
     <p class="dup">This boilerplate paragraph is repeated verbatim further down the page so that the phrase marked here has identical surroundings for well over thirty-two characters on each side of the target phrase, which defeats a short context window.</p>
     <p>Something unique sits between the two copies.</p>
@@ -54,7 +56,7 @@
   sel(p1.firstChild, 4, p1.childNodes[2], 6); // "quick " + "brown fox" + " jumps"
   let r = await __send({ type: 'pr:mark-selection' });
   ok('mark spanning <b> ok', r.ok && r.edit.exact === 'quick brown fox jumps');
-  ok('three del spans', document.querySelectorAll('.page-redline-del').length === 3);
+  ok('one span wraps text + <b> + text', document.querySelectorAll('.page-redline-del').length === 1 && document.querySelector('.page-redline-del').querySelector('b'));
   ok('page text unchanged by marking', text() === before);
 
   const pageKey = location.origin + location.pathname + location.search;
@@ -237,11 +239,31 @@
   const pieces = [...document.querySelectorAll(`[data-pr-id="${hoverId}"]`)];
   const over = (el) => el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
   over(pieces[1]);
-  ok('hover on one span lights up all spans, replacement and badge', pieces.length === 5 && pieces.every(el => el.classList.contains('page-redline-hover')));
+  ok('hover on the span lights up span, replacement and badge', pieces.length === 3 && pieces.every(el => el.classList.contains('page-redline-hover')));
   over(document.getElementById('out'));
   ok('hover clears when leaving the mark', !document.querySelector('.page-redline-hover'));
 
-  // 16. clearing the page removes its storage keys entirely
+  // 16. merged wrapping: inline code/em inside the selection is wrapped whole, blocks split it
+  const p3 = document.getElementById('p3'), p4 = document.getElementById('p4');
+  sel(p3.firstChild, 4, p3.lastChild, 6); // "the <code>wrapper</code> task, then edit <code>settings.gradle</code> and <em>commit</em> both"
+  r = await __send({ type: 'pr:mark-selection' });
+  let spans = document.querySelectorAll(`.page-redline-del[data-pr-id="${r.edit.id}"]`);
+  ok('inline code and em wrapped whole in one span', spans.length === 1 && spans[0].querySelectorAll('code').length === 2 && spans[0].querySelector('em') && spans[0].textContent === 'the wrapper task, then edit settings.gradle and commit both');
+  ok('page text unchanged by merged wrapping', p3.textContent === 'Run the wrapper task, then edit settings.gradle and commit both files.');
+  await __send({ type: 'pr:remove', id: r.edit.id });
+  ok('merged span unwraps cleanly', p3.querySelectorAll('code').length === 2 && !document.querySelector(`[data-pr-id="${r.edit.id}"]`) && p3.textContent === 'Run the wrapper task, then edit settings.gradle and commit both files.');
+  // across two paragraphs: one span per block
+  sel(p3.lastChild, p3.lastChild.data.length - 6, p4.firstChild, 8); // "files." + "A fourth"
+  r = await __send({ type: 'pr:mark-selection' });
+  spans = document.querySelectorAll(`.page-redline-del[data-pr-id="${r.edit.id}"]`);
+  ok('selection across paragraphs gives one span per paragraph', spans.length === 2 && spans[0].closest('p') === p3 && spans[1].closest('p') === p4 && !spans[0].querySelector('p'));
+  ok('cross-paragraph mark re-anchors after reload', (await reloadScript(), document.querySelectorAll(`.page-redline-del[data-pr-id="${r.edit.id}"]`).length === 2));
+  // a new mark may not swallow an existing one
+  sel(p3.firstChild, 0, p4.lastChild, p4.lastChild.data.length); // whole p3 + p4, which contain a mark
+  r = await __send({ type: 'pr:mark-selection' });
+  ok('a selection containing an existing mark is refused', !!r.error);
+
+  // 17. clearing the page removes its storage keys entirely
   await __send({ type: 'pr:clear' });
   ok('clear removes page and meta keys', !('page:' + pageKey in __store) && !('meta:' + pageKey in __store));
 
