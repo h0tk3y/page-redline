@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Page Redline",
   "version": "1.0.0",
-  "description": "Mark text on any page as invalid (strikethrough), show a replacement inline, record why, and review all edits from the toolbar popup.",
+  "description": "Strike through text on any page, show a replacement inline, record why, and review all your edits from the toolbar popup.",
   "permissions": [
     "contextMenus",
     "storage"
