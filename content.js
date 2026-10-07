@@ -324,7 +324,16 @@
   }
 
   // ---------- actions ----------
-  function markSelection(kind = 'edit') {
+  // With the card open, the shortcut of the OTHER kind converts the open mark (note -> edit or
+  // edit -> note); the same kind's shortcut behaves as usual. The context menu never converts.
+  function markSelection(kind = 'edit', source = 'menu') {
+    if (source === 'shortcut' && editingId) {
+      const open = edits.find((x) => x.id === editingId);
+      if (open && (isNote(open) ? 'note' : 'edit') !== kind) {
+        const edit = convertOpenEdit();
+        return { ok: true, edit, converted: true };
+      }
+    }
     const sel = window.getSelection();
     let range = null;
     if (sel && sel.rangeCount && !sel.isCollapsed) range = sel.getRangeAt(0).cloneRange();
@@ -502,6 +511,16 @@
       ev.stopPropagation();
     });
     shadow.addEventListener('keyup', (ev) => ev.stopPropagation());
+    // Keyboard-driven extensions (Vimium) handle Esc in text fields themselves by blurring the
+    // field, and stop the event before it reaches us. Focus leaving the card to nothing, while
+    // the window keeps focus and no pointer is involved, is that case: treat it as Cancel.
+    shadow.addEventListener('focusout', (ev) => {
+      if (rebuilding) return; // the card is hiding/moving its own fields while (re)opening
+      if (!editingId || ev.relatedTarget) return; // focus moved to another element: not Esc
+      if (!document.hasFocus()) return; // window lost focus (app switch): keep the card
+      if (Date.now() - lastPointerDown < 500) return; // a click elsewhere: the click handler decides
+      cancelEditor();
+    });
     shadow.addEventListener('keypress', (ev) => ev.stopPropagation());
     (document.body || document.documentElement).appendChild(host);
   }
@@ -550,6 +569,7 @@
 
   // Snapshot of the mark when the card opened, so Cancel can put it back.
   let snapshot = null;
+  let rebuilding = false; // true while openEditor rearranges the card (suppresses the focusout rule)
   function fieldValues() {
     return {
       replacement: shadow.querySelector('.repl').value,
@@ -578,6 +598,7 @@
     const spans = delSpans(id);
     if (!edit || !spans.length || !settings.visible) return;
     ensureEditor();
+    rebuilding = true;
     if (editingId !== id) snapshot = { replacement: edit.replacement || '', reason: edit.reason || '', note: edit.note || '', kind: isNote(edit) ? 'note' : 'edit' };
     editingId = id;
     const note = isNote(edit);
@@ -602,6 +623,7 @@
     card.style.top = `${top}px`;
     card.style.left = `${left}px`;
     shadow.querySelector(note ? '.note' : '.repl').focus();
+    rebuilding = false;
   }
 
   // Closing without Cancel (Save, Enter, clicking outside) keeps the live changes.
@@ -628,6 +650,9 @@
   }, true);
   document.addEventListener('mouseleave', () => setHover(null), true);
 
+  let lastPointerDown = 0;
+  document.addEventListener('pointerdown', () => { lastPointerDown = Date.now(); }, true);
+
   // ---------- page events ----------
   document.addEventListener('contextmenu', () => {
     const sel = window.getSelection();
@@ -652,7 +677,7 @@
     let result;
     switch (msg && msg.type) {
       case 'pr:ping': result = { ok: true }; break;
-      case 'pr:mark-selection': result = markSelection(msg.kind); break;
+      case 'pr:mark-selection': result = markSelection(msg.kind, msg.source); break;
       case 'pr:list': result = listEdits(); break;
       case 'pr:update': result = updateEdit(msg.id, msg.patch || {}); break;
       case 'pr:remove': result = removeEdit(msg.id); break;

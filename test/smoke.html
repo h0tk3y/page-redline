@@ -224,15 +224,37 @@
   const tId = r.edit.id;
   ok('shortcut creates an edit and opens the card', r.ok && r.edit.kind === 'edit' && document.getElementById('page-redline-host').style.display === 'block');
   { const nb = sh.querySelector('.note-block'), rb = sh.querySelector('.reason-block'); ok('edit mode: reason block precedes note block again', !!(rb.compareDocumentPosition(nb) & Node.DOCUMENT_POSITION_FOLLOWING)); }
+  r = await __send({ type: 'pr:mark-selection', kind: 'note', source: 'shortcut' });
+  ok('the other kind\'s shortcut converts the open edit to a note', r.converted && document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`) && sh.querySelector('.card').classList.contains('note-mode'));
+  r = await __send({ type: 'pr:mark-selection', kind: 'note', source: 'shortcut' });
+  ok('the same kind\'s shortcut again does not flip back (no selection -> nothing happens)', !r.converted && !!r.error && document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`));
   ok('selected free text while the card is open', selText(p2, 'more words'));
-  r = await __send({ type: 'pr:mark-selection', kind: 'note' });
-  ok('second shortcut with the card open creates a new mark, does not flip the first', r.ok && !r.toggled && r.edit.exact === 'more words' && r.edit.kind === 'note' && document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
+  r = await __send({ type: 'pr:mark-selection', kind: 'note', source: 'shortcut' });
+  ok('same kind\'s shortcut with a selection creates a new mark', r.ok && !r.converted && r.edit.exact === 'more words' && r.edit.kind === 'note');
+  r = await __send({ type: 'pr:mark-selection', kind: 'edit', source: 'shortcut' });
+  ok('edit shortcut converts the newly opened note to an edit', r.converted && document.querySelector(`.page-redline-del[data-pr-id="${r.edit.id}"]`));
+  await __send({ type: 'pr:remove', id: r.edit.id });
+  await __send({ type: 'pr:open-editor', id: tId });
+  sh.querySelector('.convert-link').click(); // back to an edit for the following tests
+  ok('tId is an edit again', document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
+  r = { edit: { id: tId } };
+  selText(p2, 'more words'); r = await __send({ type: 'pr:mark-selection', kind: 'edit', source: 'menu' });
+  ok('menu with the card open creates a new mark, never converts', r.ok && !r.converted && r.edit.exact === 'more words');
   // the card's convert link still flips the open mark
   await __send({ type: 'pr:open-editor', id: tId });
   sh.querySelector('.convert-link').click();
   ok('convert link flips the open mark to a note', document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`) && sh.querySelector('.card').classList.contains('note-mode'));
   sh.querySelector('.convert-link').click();
   ok('convert link flips it back', document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
+  // Esc swallowed by a keyboard extension shows up as the field blurring to nothing
+  if (document.hasFocus()) {
+    await __send({ type: 'pr:open-editor', id: tId });
+    sh.querySelector('.repl').value = 'blurred away'; sh.querySelector('.repl').dispatchEvent(new Event('input', { bubbles: true }));
+    sh.querySelector('.repl').blur();
+    ok('focus leaving the card to nothing (Vimium Esc) cancels and closes', document.getElementById('page-redline-host').style.display === 'none' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).replacement !== 'blurred away');
+  } else {
+    ok('focus-loss cancel test skipped: document not focused in this harness', true);
+  }
 
   // 14b. Enter saves from the reason select and the note field; Enter on a button does not save
   const key = (el, k, extra = {}) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, composed: true, cancelable: true, ...extra }));
