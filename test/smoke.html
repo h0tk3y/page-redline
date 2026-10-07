@@ -305,6 +305,19 @@
   await __send({ type: 'pr:update', id: r.edit.id, patch: { note: 'refresh colors' } });
   ok('back on a light page the original colors return', dDel.style.getPropertyValue('--pr-color') === '#5d4037' && dDel.style.getPropertyValue('--pr-tint') === '');
 
+  // 17b. a page that turns dark AFTER marks were colored (Dark Reader, theme toggles) gets recolored
+  selText(p2, 'more words');
+  r = await __send({ type: 'pr:mark-selection' });
+  await __send({ type: 'pr:update', id: r.edit.id, patch: { reason: 'old' } });
+  const late = document.querySelector(`.page-redline-del[data-pr-id="${r.edit.id}"]`);
+  ok('mark colored for a light page first', late.style.getPropertyValue('--pr-color') === '#5d4037');
+  document.body.style.background = '#1e1e22';
+  await Promise.resolve(); await Promise.resolve(); await new Promise(res => queueMicrotask(res));
+  ok('turning the page dark recolors existing marks', S.luminance(S.parseColor(late.style.getPropertyValue('--pr-color'))) >= 0.5 && late.style.getPropertyValue('--pr-tint') === '34%');
+  document.documentElement.setAttribute('data-theme', 'light'); document.body.style.background = '';
+  await Promise.resolve(); await Promise.resolve(); await new Promise(res => queueMicrotask(res));
+  ok('turning it light again restores the colors', late.style.getPropertyValue('--pr-color') === '#5d4037');
+
   // 18. clearing the page removes its storage keys entirely
   await __send({ type: 'pr:clear' });
   ok('clear removes page and meta keys', !('page:' + pageKey in __store) && !('meta:' + pageKey in __store));

@@ -45,14 +45,26 @@
     if (settings.visible) document.documentElement.removeAttribute('data-page-redline-hidden');
     else { document.documentElement.setAttribute('data-page-redline-hidden', ''); closeEditor(); }
   }
-  // Is the page background behind this element dark? Walks up to the first painted background.
-  function backgroundIsDark(el) {
-    for (let node = el.parentElement; node; node = node.parentElement) {
+  // Is the background behind this element dark? Walks up (from the element itself if `self`)
+  // to the first painted background.
+  function backgroundIsDark(el, self = false) {
+    for (let node = self ? el : el.parentElement; node; node = node.parentElement) {
       const bg = getComputedStyle(node).backgroundColor;
       const c = shared.parseColor(bg);
       if (c && c[3] > 0.5) return shared.luminance(c) < 0.35;
     }
     return false;
+  }
+  // The page can change scheme after we colored the marks: Dark Reader and similar extensions
+  // inject their stylesheets after load, sites have theme toggles, the OS scheme can flip.
+  // None of them can restyle our marks (extension CSS is invisible to page-level tools), so we
+  // re-sample the background and recolor when it changes.
+  let pageWasDark = null;
+  function recolorIfSchemeChanged(force = false) {
+    const dark = document.body ? backgroundIsDark(document.body, true) : false;
+    if (!force && dark === pageWasDark) return;
+    pageWasDark = dark;
+    for (const edit of edits) refreshTitles(edit);
   }
   // Mark colors adapt to the background: on a dark page the color is lightened so lines, underlines
   // and badges stay visible, and the tint behind the text is strengthened.
@@ -644,11 +656,20 @@
     reanchorTimer = setTimeout(() => {
       reanchorTimer = null;
       if (edits.some((e) => !isAnchored(e.id))) anchorAll();
+      recolorIfSchemeChanged();
     }, 500);
   });
 
+  // Theme switches usually show up as attribute changes on <html>/<body> (class, style, data-theme,
+  // Dark Reader's data-darkreader-* attributes); handle those immediately.
+  const schemeObserver = new MutationObserver(() => recolorIfSchemeChanged());
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => recolorIfSchemeChanged(true));
+
   load().then(() => {
     anchorAll();
+    pageWasDark = document.body ? backgroundIsDark(document.body, true) : false;
     observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    schemeObserver.observe(document.documentElement, { attributes: true });
+    if (document.body) schemeObserver.observe(document.body, { attributes: true });
   });
 })();

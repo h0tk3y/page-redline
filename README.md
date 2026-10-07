@@ -11,7 +11,8 @@ stays in the browser's extension storage.
 ![A documentation page with four marked edits: struck-through phrases in reason colors, each followed by its green replacement](docs/page-marks.png)
 
 Colors adapt to the page: on a dark background the reason and replacement colors are lightened
-and the tints strengthened, so marks stay readable without any setting.
+and the tints strengthened, so marks stay readable without any setting. This also follows later
+changes, such as a site's theme toggle or Dark Reader darkening the page after it loaded.
 
 ![The same kinds of marks on a dark page, with lightened colors](docs/page-marks-dark.png)
 
