@@ -137,7 +137,12 @@ look up to date while the rest is stale.
 
 Edits and settings are stored with the browser's extension storage on your machine only,
 along with each page's URL and title. The extension makes no network requests; the only way
-data leaves the browser is the export file you download yourself. It asks for access to all sites so that the
+data leaves the browser is the export file you download yourself. The full policy is in
+[PRIVACY.md](PRIVACY.md).
+
+## License
+
+[MIT](LICENSE). It asks for access to all sites so that the
 context-menu entry works on any page.
 
 ## Releasing
