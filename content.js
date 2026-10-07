@@ -451,7 +451,9 @@
         .note-block textarea { min-height: 36px; }
         .card.note-mode .note-block textarea { min-height: 60px; }
         .convert { margin-top: 8px; font-size: 11px; color: #6e6e73; }
-        .convert a { color: inherit; cursor: pointer; text-decoration: underline; }
+        /* A real button (native Enter/Space activation) styled as a link. */
+        .convert button { all: unset; font: inherit; color: inherit; cursor: pointer; text-decoration: underline; }
+        .convert button:focus-visible { outline: 2px solid #2e7d32; outline-offset: 2px; border-radius: 2px; }
         label { display: block; font-weight: 600; margin: 8px 0 4px; }
         textarea, input, select { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; border: 1px solid #b8b8c0; border-radius: 6px; background: #fff; color: inherit; }
         textarea { resize: vertical; min-height: 44px; }
@@ -484,7 +486,7 @@
           <label>Note</label>
           <textarea rows="1" class="note"></textarea>
         </div>
-        <div class="convert"><a class="convert-link" tabindex="0" role="button"></a></div>
+        <div class="convert"><button type="button" class="convert-link"></button></div>
         <div class="row">
           <button class="primary save" title="Enter">Save</button>
           <button class="cancel" title="Esc">Cancel</button>
@@ -504,8 +506,7 @@
       if (ev.key === 'Escape') { ev.preventDefault(); cancelEditor(); }
       else if (ev.key === 'Enter' && !ev.shiftKey) {
         const t = ev.target;
-        if (t.tagName === 'BUTTON') { /* Enter on a button activates that button */ }
-        else if (t.classList.contains('convert-link')) { ev.preventDefault(); convertOpenEdit(); }
+        if (t.tagName === 'BUTTON') { /* Enter on a button (incl. the convert link) activates it natively */ }
         else { ev.preventDefault(); saveFromEditor(); } // textareas, the reason select, anything else
       }
       ev.stopPropagation();

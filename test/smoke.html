@@ -271,8 +271,9 @@
   sh.querySelector('textarea.note').value = 'not saved';
   key(sh.querySelector('.cancel'), 'Enter');
   ok('Enter on a button does not save through the card handler', document.getElementById('page-redline-host').style.display === 'block' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).note === 'saved via note field');
-  key(sh.querySelector('.convert-link'), 'Enter');
-  ok('Enter on the convert link flips the kind', document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`));
+  ok('convert link is a real button (native Enter/Space activation)', sh.querySelector('.convert-link').tagName === 'BUTTON' && sh.querySelector('.convert-link').type === 'button');
+  sh.querySelector('.convert-link').click();
+  ok('activating the convert link flips the kind', document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`));
   sh.querySelector('.convert-link').click();
   const rowBtns = [...sh.querySelectorAll('.row button')].sort((x, y) => x.getBoundingClientRect().left - y.getBoundingClientRect().left).map(b => b.className.split(' ').pop());
   ok('button row: Remove left, Save at the far right [' + rowBtns.join(',') + ' host=' + document.getElementById('page-redline-host').style.display + ' lefts=' + [...sh.querySelectorAll('.row button')].map(b => Math.round(b.getBoundingClientRect().left)).join('/') + ']', rowBtns[0] === 'remove' && rowBtns[rowBtns.length - 1] === 'save');
