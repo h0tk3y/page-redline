@@ -50,6 +50,8 @@ function render() {
   renderPreview();
 }
 
+const shown = (hex) => shared.displayColor(hex, window.matchMedia('(prefers-color-scheme: dark)').matches);
+
 function renderPreview() {
   const p = $('#preview');
   p.textContent = '';
@@ -58,9 +60,9 @@ function renderPreview() {
   for (const r of rows) {
     const line = document.createElement('div');
     const del = document.createElement('span'); del.className = 'del'; del.textContent = r.label;
-    del.style.setProperty('--c', r.color);
+    del.style.setProperty('--c', shown(r.color));
     const ins = document.createElement('span'); ins.className = 'ins'; ins.textContent = 'replacement';
-    ins.style.setProperty('--c', settings.replacementColor);
+    ins.style.setProperty('--c', shown(settings.replacementColor));
     line.append(del, ins);
     p.appendChild(line);
   }

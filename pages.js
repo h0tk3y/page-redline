@@ -7,6 +7,7 @@ const open = new Set(); // page keys whose edit list is expanded
 
 const reasonOf = (id) => (id ? settings.reasons.find((r) => r.id === id) || null : null);
 const reasonLabel = (id) => { const r = reasonOf(id); return r ? r.label : id ? `${id} (removed reason)` : ''; };
+const shown = (hex) => shared.displayColor(hex, window.matchMedia('(prefers-color-scheme: dark)').matches);
 const fmtDate = (t) => (t ? new Date(t).toLocaleString() : '');
 
 function flash(text) {
@@ -71,17 +72,17 @@ function render() {
       if (shared.isNote(e)) {
         const icon = document.createElement('span'); icon.className = 'note-icon'; icon.textContent = '✎';
         const txt = document.createElement('span'); txt.className = 'note-text'; txt.textContent = e.exact;
-        if (r) txt.style.setProperty('--note', r.color);
+        if (r) txt.style.setProperty('--note', shown(r.color));
         line.append(icon, txt);
       } else {
         const del = document.createElement('span'); del.className = 'del'; del.textContent = e.exact;
-        if (r) { del.style.color = r.color; del.style.textDecorationColor = r.color; }
+        if (r) { del.style.color = shown(r.color); del.style.textDecorationColor = shown(r.color); }
         line.appendChild(del);
       }
       if (!shared.isNote(e) && e.replacement) {
         const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '→';
         const ins = document.createElement('span'); ins.className = 'ins'; ins.textContent = e.replacement;
-        ins.style.color = settings.replacementColor; ins.style.textDecorationColor = settings.replacementColor;
+        ins.style.color = shown(settings.replacementColor); ins.style.textDecorationColor = shown(settings.replacementColor);
         line.append(arrow, ins);
       }
       li.appendChild(line);

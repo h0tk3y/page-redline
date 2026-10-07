@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Configuring builds — Demo docs (dark)</title>
+<style>
+  body { margin: 0; font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #e6e6ea; background: #1b1b1f; }
+  main { max-width: 760px; margin: 0 auto; padding: 36px 32px; }
+  h1 { font-size: 30px; margin: 0 0 6px; } .sub { color: #9a9aa3; margin: 0 0 22px; }
+  h2 { font-size: 21px; margin: 26px 0 8px; } p { margin: 0 0 14px; }
+  code { background: #2a2a30; padding: 1px 5px; border-radius: 4px; font-size: 15px; }
+</style></head>
+<body><main>
+<h1>Configuring builds</h1>
+<p class="sub">Project documentation · draft</p>
+<p>In order to be able to configure the build, you first of all need to create a settings file in the root directory of the project. The settings file is the file that declares which plugins are applied to the build and it is also the file that lists the projects that make up the build.</p>
+<h2>Declaring plugins</h2>
+<p>Plugins are declared in the settings file. Each plugin is identified by its id, and plugins are resolved from the repositorys that are declared in the same file. Plugins are declared in the settings file, never in a build file.</p>
+<p>You do not install it by hand — the <code>wrapper</code> task installs it by version, so create a <code>settings.gradle</code> marker and run <code>gradle wrapper</code> with the version in the arguments.</p>
+<p>Once a plugin is applied, it contributes a schema that describes the software types that the build files can use. A build file then picks one of those software types and configures it.</p>
+<h2>Next steps</h2>
+<p>The next page explains how to author a declarative plugin and how the schema it contributes shows up in the editor.</p>
+</main></body></html>

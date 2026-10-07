@@ -215,21 +215,44 @@
   ok('note survives reload as a note', document.querySelector(`.page-redline-note[data-pr-id="${noteId}"]`)?.textContent === 'The');
   ok('markdown export distinguishes notes', PageRedlineShared.editToMarkdown({ kind: 'note', exact: 'The', note: 'Needs a citation', reason: 'unclear' }, () => 'Unclear') === '- ✎ “The” — Needs a citation _(Unclear)_');
 
-  // 14. a shortcut pressed while the card is open flips the open mark's kind; the menu does not
+  // 14. shortcuts never flip the open mark: with the card open they create a new mark from the selection
   const selText = (root, phrase) => { const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const i = n.data.indexOf(phrase); if (i >= 0 && !n.parentElement.closest('.page-redline-del,.page-redline-note,.page-redline-ins')) { sel(n, i, n, i + phrase.length); return true; } } return false; };
   await __send({ type: 'pr:remove', id: noteId });
   ok('selected free text for the shortcut test', selText(p1, 'lazy dog'));
-  r = await __send({ type: 'pr:mark-selection', kind: 'edit', source: 'shortcut' });
+  r = await __send({ type: 'pr:mark-selection', kind: 'edit' });
   const tId = r.edit.id;
   ok('shortcut creates an edit and opens the card', r.ok && r.edit.kind === 'edit' && document.getElementById('page-redline-host').style.display === 'block');
-  sh.querySelector('textarea.note').value = 'typed before flipping';
-  r = await __send({ type: 'pr:mark-selection', kind: 'edit', source: 'shortcut' });
-  ok('second press flips it to a note, keeping typed text', r.toggled && document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`) && sh.querySelector('.card').classList.contains('note-mode') && sh.querySelector('textarea.note').value === 'typed before flipping');
-  r = await __send({ type: 'pr:mark-selection', kind: 'note', source: 'shortcut' });
-  ok('either shortcut flips back', r.toggled && document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
   ok('selected free text while the card is open', selText(p2, 'more words'));
-  r = await __send({ type: 'pr:mark-selection', kind: 'edit', source: 'menu' });
-  ok('menu with the card open creates a new mark instead of flipping', r.ok && !r.toggled && r.edit.exact === 'more words' && document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
+  r = await __send({ type: 'pr:mark-selection', kind: 'note' });
+  ok('second shortcut with the card open creates a new mark, does not flip the first', r.ok && !r.toggled && r.edit.exact === 'more words' && r.edit.kind === 'note' && document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
+  // the card's convert link still flips the open mark
+  await __send({ type: 'pr:open-editor', id: tId });
+  sh.querySelector('.convert-link').click();
+  ok('convert link flips the open mark to a note', document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`) && sh.querySelector('.card').classList.contains('note-mode'));
+  sh.querySelector('.convert-link').click();
+  ok('convert link flips it back', document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
+
+  // 14b. Enter saves from the reason select and the note field; Enter on a button does not save
+  const key = (el, k, extra = {}) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, composed: true, cancelable: true, ...extra }));
+  await __send({ type: 'pr:open-editor', id: tId });
+  sh.querySelector('.reason').value = '';
+  sh.querySelector('textarea.note').value = 'saved via select';
+  key(sh.querySelector('.reason'), 'Enter');
+  ok('Enter on the reason select saves and closes', document.getElementById('page-redline-host').style.display === 'none' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).note === 'saved via select');
+  await __send({ type: 'pr:open-editor', id: tId });
+  sh.querySelector('textarea.note').value = 'saved via note field';
+  key(sh.querySelector('textarea.note'), 'Enter');
+  ok('Enter in the note field saves', (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).note === 'saved via note field');
+  await __send({ type: 'pr:open-editor', id: tId });
+  sh.querySelector('textarea.note').value = 'not saved';
+  key(sh.querySelector('.close'), 'Enter');
+  ok('Enter on a button does not save through the card handler', document.getElementById('page-redline-host').style.display === 'block' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).note === 'saved via note field');
+  key(sh.querySelector('.convert-link'), 'Enter');
+  ok('Enter on the convert link flips the kind', document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`));
+  sh.querySelector('.convert-link').click();
+  const rowBtns = [...sh.querySelectorAll('.row button')].sort((x, y) => x.getBoundingClientRect().left - y.getBoundingClientRect().left).map(b => b.className.split(' ').pop());
+  ok('button row: Remove left, Save at the far right [' + rowBtns.join(',') + ' host=' + document.getElementById('page-redline-host').style.display + ' lefts=' + [...sh.querySelectorAll('.row button')].map(b => Math.round(b.getBoundingClientRect().left)).join('/') + ']', rowBtns[0] === 'remove' && rowBtns[rowBtns.length - 1] === 'save');
+  sh.querySelector('.close').click();
 
   // 15. hovering any piece of a multi-span mark highlights every piece
   sel(p1.firstChild, 4, p1.childNodes[2], 6); // "quick " + <b>brown fox</b> + " jumps" -> three spans
@@ -263,7 +286,26 @@
   r = await __send({ type: 'pr:mark-selection' });
   ok('a selection containing an existing mark is refused', !!r.error);
 
-  // 17. clearing the page removes its storage keys entirely
+  // 17. dark backgrounds: colors are lightened and tints strengthened; light backgrounds untouched
+  const S = PageRedlineShared;
+  ok('displayColor lightens dark reason colors on dark', S.luminance(S.parseColor(S.displayColor('#5d4037', true))) >= 0.5 && S.displayColor('#5d4037', false) === '#5d4037');
+  ok('displayColor leaves already-light colors mostly alone', S.displayColor('#f9a825', true) === '#f9a825' || S.luminance(S.parseColor(S.displayColor('#f9a825', true))) >= 0.5);
+  ok('parseColor handles rgb()', JSON.stringify(S.parseColor('rgb(30, 30, 30)')) === '[30,30,30,1]' && S.isDarkColor('rgb(30, 30, 30)') && !S.isDarkColor('#ffffff'));
+  document.body.style.background = '#1e1e22';
+  __store.settings = { reasons: [{ id: 'old', label: 'Outdated', color: '#5d4037' }] };
+  __onChanged({ settings: { newValue: __store.settings } }, 'local');
+  await __send({ type: 'pr:clear' });
+  selText(p1, 'lazy dog');
+  r = await __send({ type: 'pr:mark-selection' });
+  await __send({ type: 'pr:update', id: r.edit.id, patch: { reason: 'old', replacement: 'idle dog' } });
+  const dDel = document.querySelector(`.page-redline-del[data-pr-id="${r.edit.id}"]`), dIns = document.querySelector(`.page-redline-ins[data-pr-id="${r.edit.id}"]`);
+  ok('on a dark page the struck mark gets a lightened color and a stronger tint', S.luminance(S.parseColor(dDel.style.getPropertyValue('--pr-color'))) >= 0.5 && dDel.style.getPropertyValue('--pr-tint') === '34%');
+  ok('on a dark page the replacement color is lightened too', S.luminance(S.parseColor(dIns.style.getPropertyValue('--pr-color'))) >= 0.5 && dIns.style.getPropertyValue('--pr-tint') === '26%');
+  document.body.style.background = '';
+  await __send({ type: 'pr:update', id: r.edit.id, patch: { note: 'refresh colors' } });
+  ok('back on a light page the original colors return', dDel.style.getPropertyValue('--pr-color') === '#5d4037' && dDel.style.getPropertyValue('--pr-tint') === '');
+
+  // 18. clearing the page removes its storage keys entirely
   await __send({ type: 'pr:clear' });
   ok('clear removes page and meta keys', !('page:' + pageKey in __store) && !('meta:' + pageKey in __store));
 

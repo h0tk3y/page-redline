@@ -10,6 +10,11 @@ stays in the browser's extension storage.
 
 ![A documentation page with four marked edits: struck-through phrases in reason colors, each followed by its green replacement](docs/page-marks.png)
 
+Colors adapt to the page: on a dark background the reason and replacement colors are lightened
+and the tints strengthened, so marks stay readable without any setting.
+
+![The same kinds of marks on a dark page, with lightened colors](docs/page-marks-dark.png)
+
 ## Features
 
 - **Mark text as invalid.** Select any text on a page, right-click, choose *Mark as invalid…*,
@@ -94,10 +99,8 @@ to be signed through addons.mozilla.org (free, "unlisted" self-distribution); th
 
 1. Select text on the page, then right-click and choose **Mark as invalid…** (or press
    **Alt+Shift+M**) to strike it through, or **Add a note…** (**Alt+Shift+N**) to only attach
-   a note. While the editor card is open, pressing either shortcut flips that mark between
-   strikethrough and note, so **Alt+Shift+M twice** turns the new mark into a note. Shortcuts
-   can be changed at `chrome://extensions/shortcuts` or, in Firefox, under *Manage Extension
-   Shortcuts* on the add-ons page.
+   a note. Shortcuts can be changed at `chrome://extensions/shortcuts` or, in Firefox, under
+   *Manage Extension Shortcuts* on the add-ons page.
 2. In the card that opens, type the replacement or the note and pick a reason. An empty
    replacement keeps just the strikethrough. **Enter** saves, **Esc** closes.
 3. Click any mark, or the ✎ badge after it, at any time to edit or remove it.

@@ -15,6 +15,8 @@ const shared = globalThis.PageRedlineShared;
 let settings = shared.normalizeSettings(null);
 
 function reasonOf(id) { return id ? (state.reasons || []).find((r) => r.id === id) || null : null; }
+const uiDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+const shown = (hex) => shared.displayColor(hex, uiDark());
 function reasonLabel(id) { const r = reasonOf(id); return r ? r.label : id ? `${id} (removed reason)` : ''; }
 
 function flash(text) {
@@ -53,12 +55,12 @@ function render() {
     if (isNote) {
       const icon = document.createElement('span'); icon.className = 'note-icon'; icon.textContent = '✎';
       const txt = document.createElement('span'); txt.className = 'note-text'; txt.textContent = e.exact;
-      if (reason) txt.style.setProperty('--note', reason.color);
+      if (reason) txt.style.setProperty('--note', shown(reason.color));
       line.append(icon, txt);
     } else {
       const del = document.createElement('span'); del.className = 'del'; del.textContent = e.exact;
-      if (reason) { del.style.color = reason.color; del.style.textDecorationColor = reason.color; }
-      if (state.replacementColor) line.style.setProperty('--ins', state.replacementColor);
+      if (reason) { del.style.color = shown(reason.color); del.style.textDecorationColor = shown(reason.color); }
+      if (state.replacementColor) line.style.setProperty('--ins', shown(state.replacementColor));
       line.appendChild(del);
       if (e.replacement) {
         const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '→';

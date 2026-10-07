@@ -11,6 +11,7 @@
   const INS = 'page-redline-ins';   // replacement text after an edit
   const BADGE = 'page-redline-badge'; // note indicator after an edit
   const NOTE_FALLBACK_COLOR = '#f9a825';
+  const EDIT_FALLBACK_COLOR = '#d32f2f';
   const FLASH = 'page-redline-flash';
   const HOVER = 'page-redline-hover';
   const HOST_ID = 'page-redline-host';
@@ -44,12 +45,25 @@
     if (settings.visible) document.documentElement.removeAttribute('data-page-redline-hidden');
     else { document.documentElement.setAttribute('data-page-redline-hidden', ''); closeEditor(); }
   }
+  // Is the page background behind this element dark? Walks up to the first painted background.
+  function backgroundIsDark(el) {
+    for (let node = el.parentElement; node; node = node.parentElement) {
+      const bg = getComputedStyle(node).backgroundColor;
+      const c = shared.parseColor(bg);
+      if (c && c[3] > 0.5) return shared.luminance(c) < 0.35;
+    }
+    return false;
+  }
+  // Mark colors adapt to the background: on a dark page the color is lightened so lines, underlines
+  // and badges stay visible, and the tint behind the text is strengthened.
   function applyColor(el, edit) {
-    if (el.classList.contains(INS)) { el.style.setProperty('--pr-color', settings.replacementColor); return; }
-    const r = reasonOf(edit.reason);
-    if (r) el.style.setProperty('--pr-color', r.color);
-    else if (isNote(edit)) el.style.setProperty('--pr-color', NOTE_FALLBACK_COLOR);
-    else el.style.removeProperty('--pr-color');
+    const dark = backgroundIsDark(el);
+    let base;
+    if (el.classList.contains(INS)) base = settings.replacementColor;
+    else { const r = reasonOf(edit.reason); base = r ? r.color : isNote(edit) ? NOTE_FALLBACK_COLOR : EDIT_FALLBACK_COLOR; }
+    el.style.setProperty('--pr-color', shared.displayColor(base, dark));
+    if (dark) el.style.setProperty('--pr-tint', el.classList.contains(INS) ? '26%' : el.classList.contains(NOTE) ? '42%' : '34%');
+    else el.style.removeProperty('--pr-tint');
   }
   async function save() {
     if (!edits.length) { await api.storage.local.remove([storageKey, metaKey]); return; }
@@ -290,14 +304,7 @@
   }
 
   // ---------- actions ----------
-  // A shortcut pressed while the editor card is open flips the open mark between
-  // strikethrough and note (so Alt+Shift+M twice yields a note). The context menu never
-  // does this: a right-click leaves the card open, and it should still create a new mark.
-  function markSelection(kind = 'edit', source = 'menu') {
-    if (source === 'shortcut' && editingId && edits.some((x) => x.id === editingId)) {
-      const edit = convertOpenEdit();
-      return { ok: true, edit, toggled: true };
-    }
+  function markSelection(kind = 'edit') {
     const sel = window.getSelection();
     let range = null;
     if (sel && sel.rangeCount && !sel.isCollapsed) range = sel.getRangeAt(0).cloneRange();
@@ -420,10 +427,12 @@
         label { display: block; font-weight: 600; margin: 8px 0 4px; }
         textarea, input, select { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; border: 1px solid #b8b8c0; border-radius: 6px; background: #fff; color: inherit; }
         textarea { resize: vertical; min-height: 44px; }
-        .row { display: flex; gap: 6px; margin-top: 10px; }
+        .row { display: flex; gap: 6px; margin-top: 10px; justify-content: flex-end; }
+        .row .remove { order: -1; margin-right: auto; }
+        .row .save { order: 1; }
         button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid #b8b8c0; background: #f4f4f6; color: inherit; cursor: pointer; }
         button.primary { background: #2e7d32; border-color: #2e7d32; color: #fff; }
-        button.danger { color: #b71c1c; margin-left: auto; }
+        button.danger { color: #b71c1c; }
         .swatch { width: 14px; height: 14px; border-radius: 50%; flex: none; border: 1px solid rgba(0,0,0,.2); background: transparent; }
         @media (prefers-color-scheme: dark) {
           .card { background: #1f1f23; color: #ededf0; border-color: #45454d; }
@@ -447,7 +456,7 @@
           <label>Note</label>
           <textarea rows="1" class="note"></textarea>
         </div>
-        <div class="convert"><a class="convert-link"></a></div>
+        <div class="convert"><a class="convert-link" tabindex="0" role="button"></a></div>
         <div class="row">
           <button class="primary save" title="Enter">Save</button>
           <button class="close" title="Esc">Close</button>
@@ -461,7 +470,12 @@
     shadow.querySelector('.convert-link').addEventListener('click', convertOpenEdit);
     shadow.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape') { ev.preventDefault(); closeEditor(); }
-      else if (ev.key === 'Enter' && !ev.shiftKey && ev.target.tagName !== 'SELECT') { ev.preventDefault(); saveFromEditor(); }
+      else if (ev.key === 'Enter' && !ev.shiftKey) {
+        const t = ev.target;
+        if (t.tagName === 'BUTTON') { /* Enter on a button activates that button */ }
+        else if (t.classList.contains('convert-link')) { ev.preventDefault(); convertOpenEdit(); }
+        else { ev.preventDefault(); saveFromEditor(); } // textareas, the reason select, anything else
+      }
       ev.stopPropagation();
     });
     shadow.addEventListener('keyup', (ev) => ev.stopPropagation());
@@ -491,7 +505,8 @@
   function updateSwatch() {
     const r = reasonOf(shadow.querySelector('.reason').value);
     shadow.querySelector('.swatch').style.background = r ? r.color : 'transparent';
-    shadow.querySelector('.card').style.setProperty('--note-color', r ? r.color : NOTE_FALLBACK_COLOR);
+    const cardDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    shadow.querySelector('.card').style.setProperty('--note-color', shared.displayColor(r ? r.color : NOTE_FALLBACK_COLOR, cardDark));
   }
 
   // Flip the open mark's kind, keeping whatever was typed, and reopen the card in the other mode.
@@ -592,7 +607,7 @@
     let result;
     switch (msg && msg.type) {
       case 'pr:ping': result = { ok: true }; break;
-      case 'pr:mark-selection': result = markSelection(msg.kind, msg.source); break;
+      case 'pr:mark-selection': result = markSelection(msg.kind); break;
       case 'pr:list': result = listEdits(); break;
       case 'pr:update': result = updateEdit(msg.id, msg.patch || {}); break;
       case 'pr:remove': result = removeEdit(msg.id); break;

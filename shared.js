@@ -53,6 +53,37 @@
 
   const isNote = (e) => e && e.kind === 'note';
 
+  // ---- color helpers (dark-background adaptation) ----
+  // Parses #rrggbb / #rgb / rgb() / rgba(); returns [r, g, b, a] or null.
+  function parseColor(str) {
+    if (!str) return null;
+    const s = String(str).trim();
+    let m = s.match(/^#([0-9a-f]{6})$/i);
+    if (m) return [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4, 6), 16), 1];
+    m = s.match(/^#([0-9a-f]{3})$/i);
+    if (m) return [...m[1]].map((c) => parseInt(c + c, 16)).concat([1]);
+    m = s.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+%?))?\s*\)$/i);
+    if (m) { let a = m[4] == null ? 1 : parseFloat(m[4]); if (m[4] && m[4].endsWith('%')) a /= 100; return [+m[1], +m[2], +m[3], a]; }
+    return null;
+  }
+  const toHex = (rgb) => '#' + rgb.slice(0, 3).map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  // WCAG relative luminance, 0 (black) .. 1 (white).
+  function luminance(rgb) {
+    const [r, g, b] = rgb.slice(0, 3).map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  const isDarkColor = (str) => { const c = parseColor(str); return !!c && c[3] > 0 && luminance(c) < 0.35; };
+  const mixWithWhite = (rgb, t) => rgb.slice(0, 3).map((v) => v + (255 - v) * t);
+  // A mark color as it should be drawn on a dark background: mixed with white until it is light
+  // enough (luminance >= 0.5) to read as a line, underline or badge. Unchanged on light backgrounds.
+  function displayColor(hex, onDark) {
+    const c = parseColor(hex);
+    if (!c || !onDark) return hex;
+    let rgb = c.slice(0, 3);
+    for (let t = 0.3; t <= 0.9 && luminance(rgb) < 0.5; t += 0.1) rgb = mixWithWhite(c, t);
+    return toHex(rgb);
+  }
+
   // One Markdown bullet per mark. `label(reasonId)` resolves the reason's display name.
   function editToMarkdown(e, label) {
     const reason = e.reason ? label(e.reason) : '';
@@ -65,5 +96,5 @@
     return `- ${change}${why ? ` — _${why}_` : ''}`;
   }
 
-  globalThis.PageRedlineShared = { isNote, editToMarkdown, SETTINGS_KEY, PAGE_PREFIX, META_PREFIX, EXPORT_FORMAT, DEFAULT_REASONS, DEFAULT_REPLACEMENT_COLOR, normalizeSettings, newReasonId, pagesFromStorage };
+  globalThis.PageRedlineShared = { isNote, editToMarkdown, parseColor, luminance, isDarkColor, displayColor, SETTINGS_KEY, PAGE_PREFIX, META_PREFIX, EXPORT_FORMAT, DEFAULT_REASONS, DEFAULT_REPLACEMENT_COLOR, normalizeSettings, newReasonId, pagesFromStorage };
 })();

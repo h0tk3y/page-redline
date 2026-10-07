@@ -78,6 +78,22 @@ try {
   await popup.evaluate(`tabId = ${tabId}; refresh()`); await sleep(500);
   await popup.shot('popup.png', 380, 470);
   popup.close();
+  // the same marks on a dark page: colors are lightened automatically
+  await page.send('Page.navigate', { url: 'file://' + path.join(EXT, 'test', 'demo-dark.html') });
+  await sleep(1200);
+  const darkTab = await bg.evaluate('chrome.tabs.query({url:"file://*/*"}).then(ts => ts[0].id)');
+  const dmsg = (m) => bg.evaluate(`chrome.tabs.sendMessage(${darkTab}, ${JSON.stringify(m)})`);
+  const dmark = async (phrase, patch, kind = 'edit') => {
+    await page.evaluate(`(() => { const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const i = n.data.indexOf(${JSON.stringify(phrase)}); if (i >= 0) { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + ${phrase.length}); const s = getSelection(); s.removeAllRanges(); s.addRange(r); return true; } } return false; })()`);
+    const r = await dmsg({ type: 'pr:mark-selection', kind });
+    if (r && r.ok) await dmsg({ type: 'pr:update', id: r.edit.id, patch });
+  };
+  await dmark('In order to be able to configure the build, you first of all need to', { replacement: 'To configure the build,', reason: 'outdated', note: 'Say it in half the words.' });
+  await dmark('repositorys', { replacement: 'repositories', reason: 'offtopic' });
+  await dmark('Plugins are declared in the settings file, never in a build file.', { replacement: '', reason: 'duplicate', note: 'Already said.' });
+  await dmark('it contributes a schema that describes the software types', { note: 'Link to the schema page.', reason: 'other' }, 'note');
+  await page.evaluate('document.getElementById("page-redline-host")?.style.setProperty("display","none")');
+  await page.shot('page-marks-dark.png', 1000, 620);
   // all-pages screen
   const at = await http(`/json/new?chrome-extension://${extId}/pages.html`, { method: 'PUT' });
   const allp = await connect(at.webSocketDebuggerUrl);
