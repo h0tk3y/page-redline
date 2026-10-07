@@ -211,7 +211,7 @@
   await __send({ type: 'pr:open-editor', id: noteId });
   const sh = document.getElementById('page-redline-host').shadowRoot;
   ok('editor note mode shows this note', sh.querySelector('.card').classList.contains('note-mode') && sh.querySelector('textarea.note').value === 'Needs a citation' && sh.activeElement === sh.querySelector('textarea.note'));
-  sh.querySelector('.close').click();
+  sh.querySelector('.cancel').click();
   ok('note survives reload as a note', document.querySelector(`.page-redline-note[data-pr-id="${noteId}"]`)?.textContent === 'The');
   ok('markdown export distinguishes notes', PageRedlineShared.editToMarkdown({ kind: 'note', exact: 'The', note: 'Needs a citation', reason: 'unclear' }, () => 'Unclear') === '- ✎ “The” — Needs a citation _(Unclear)_');
 
@@ -245,14 +245,34 @@
   ok('Enter in the note field saves', (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).note === 'saved via note field');
   await __send({ type: 'pr:open-editor', id: tId });
   sh.querySelector('textarea.note').value = 'not saved';
-  key(sh.querySelector('.close'), 'Enter');
+  key(sh.querySelector('.cancel'), 'Enter');
   ok('Enter on a button does not save through the card handler', document.getElementById('page-redline-host').style.display === 'block' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).note === 'saved via note field');
   key(sh.querySelector('.convert-link'), 'Enter');
   ok('Enter on the convert link flips the kind', document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`));
   sh.querySelector('.convert-link').click();
   const rowBtns = [...sh.querySelectorAll('.row button')].sort((x, y) => x.getBoundingClientRect().left - y.getBoundingClientRect().left).map(b => b.className.split(' ').pop());
   ok('button row: Remove left, Save at the far right [' + rowBtns.join(',') + ' host=' + document.getElementById('page-redline-host').style.display + ' lefts=' + [...sh.querySelectorAll('.row button')].map(b => Math.round(b.getBoundingClientRect().left)).join('/') + ']', rowBtns[0] === 'remove' && rowBtns[rowBtns.length - 1] === 'save');
-  sh.querySelector('.close').click();
+  sh.querySelector('.cancel').click();
+
+  // 14c. the card is live: reason/replacement changes show on the page before Save; Cancel reverts; outside click keeps
+  await __send({ type: 'pr:open-editor', id: tId });
+  const live = document.querySelector(`[data-pr-id="${tId}"]`);
+  const liveBefore = live.style.getPropertyValue('--pr-color');
+  sh.querySelector('.reason').value = 'unclear'; sh.querySelector('.reason').dispatchEvent(new Event('change', { bubbles: true }));
+  ok('changing the reason in the card recolors the mark immediately', live.style.getPropertyValue('--pr-color') === '#ef6c00' && liveBefore !== '#ef6c00');
+  sh.querySelector('.repl').value = 'typed live'; sh.querySelector('.repl').dispatchEvent(new Event('input', { bubbles: true }));
+  ok('typing a replacement shows it on the page immediately', document.querySelector(`.page-redline-ins[data-pr-id="${tId}"]`)?.textContent === 'typed live');
+  sh.querySelector('.cancel').click();
+  ok('Cancel reverts reason and replacement to the state at open', (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).reason === '' && !document.querySelector(`.page-redline-ins[data-pr-id="${tId}"]`) && live.style.getPropertyValue('--pr-color') === liveBefore);
+  await __send({ type: 'pr:open-editor', id: tId });
+  sh.querySelector('.repl').value = 'kept'; sh.querySelector('.repl').dispatchEvent(new Event('input', { bubbles: true }));
+  document.body.click(); // click outside
+  ok('clicking outside keeps the live changes', document.getElementById('page-redline-host').style.display === 'none' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).replacement === 'kept');
+  await __send({ type: 'pr:open-editor', id: tId });
+  sh.querySelector('.repl').value = 'esc drops this'; sh.querySelector('.repl').dispatchEvent(new Event('input', { bubbles: true }));
+  key(sh.querySelector('.repl'), 'Escape');
+  ok('Esc reverts like Cancel', (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).replacement === 'kept');
+  await __send({ type: 'pr:update', id: tId, patch: { replacement: '' } });
 
   // 15. hovering any piece of a multi-span mark highlights every piece
   sel(p1.firstChild, 4, p1.childNodes[2], 6); // "quick " + <b>brown fox</b> + " jumps" -> three spans

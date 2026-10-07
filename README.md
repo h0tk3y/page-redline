@@ -104,8 +104,10 @@ to be signed through addons.mozilla.org (free, "unlisted" self-distribution); th
    **Alt+Shift+M**) to strike it through, or **Add a note…** (**Alt+Shift+N**) to only attach
    a note. Shortcuts can be changed at `chrome://extensions/shortcuts` or, in Firefox, under
    *Manage Extension Shortcuts* on the add-ons page.
-2. In the card that opens, type the replacement or the note and pick a reason. An empty
-   replacement keeps just the strikethrough. **Enter** saves, **Esc** closes.
+2. In the card that opens, type the replacement or the note and pick a reason. Everything
+   applies to the page as you type or pick, and is saved as you go. An empty replacement keeps
+   just the strikethrough. **Enter** or **Save** closes the card; **Esc** or **Cancel** puts the
+   mark back the way it was when the card opened; clicking outside keeps your changes.
 3. Click any mark, or the ✎ badge after it, at any time to edit or remove it.
 4. Open the toolbar popup for the full list. Click an edit's text to jump to it on the
    page; use **Copy Markdown** to paste the list into an issue or a message:

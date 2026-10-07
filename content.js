@@ -78,9 +78,17 @@
     else el.style.removeProperty('--pr-tint');
   }
   async function save() {
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     if (!edits.length) { await api.storage.local.remove([storageKey, metaKey]); return; }
     await api.storage.local.set({ [storageKey]: edits, [metaKey]: { title: document.title, updatedAt: Date.now() } });
   }
+  // Live edits from the card arrive on every keystroke; coalesce the storage writes.
+  let saveTimer = null;
+  function saveSoon() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => { saveTimer = null; save(); }, 250);
+  }
+  window.addEventListener('pagehide', () => { if (saveTimer) save(); });
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
   // ---------- text map ----------
@@ -351,7 +359,9 @@
     return { ok: true, edit };
   }
 
-  function updateEdit(id, patch) {
+  // `live` updates come from the card on every keystroke and coalesce their storage writes;
+  // everything else (popup, cancel, save) persists immediately.
+  function updateEdit(id, patch, live = false) {
     const edit = edits.find((x) => x.id === id);
     if (!edit) return { error: 'Unknown edit.' };
     if (typeof patch.replacement === 'string') edit.replacement = patch.replacement.trim();
@@ -366,7 +376,7 @@
     const newKind = patch.kind === 'note' ? 'note' : patch.kind === 'edit' ? 'edit' : null;
     if (newKind && newKind !== (isNote(edit) ? 'note' : 'edit')) { edit.kind = newKind; reapply(edit); }
     else refreshTitles(edit);
-    save();
+    if (live) saveSoon(); else save();
     return { ok: true, edit };
   }
 
@@ -471,17 +481,21 @@
         <div class="convert"><a class="convert-link" tabindex="0" role="button"></a></div>
         <div class="row">
           <button class="primary save" title="Enter">Save</button>
-          <button class="close" title="Esc">Close</button>
+          <button class="cancel" title="Esc">Cancel</button>
           <button class="danger remove">Remove</button>
         </div>
       </div>`;
     shadow.querySelector('.reason').addEventListener('change', updateSwatch);
     shadow.querySelector('.save').addEventListener('click', saveFromEditor);
-    shadow.querySelector('.close').addEventListener('click', closeEditor);
+    shadow.querySelector('.cancel').addEventListener('click', cancelEditor);
+    // Everything applies live: the mark on the page follows the fields as you type or pick.
+    shadow.querySelector('.repl').addEventListener('input', applyLive);
+    shadow.querySelector('.note').addEventListener('input', applyLive);
+    shadow.querySelector('.reason').addEventListener('change', applyLive);
     shadow.querySelector('.remove').addEventListener('click', () => { if (editingId) removeEdit(editingId); });
     shadow.querySelector('.convert-link').addEventListener('click', convertOpenEdit);
     shadow.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Escape') { ev.preventDefault(); closeEditor(); }
+      if (ev.key === 'Escape') { ev.preventDefault(); cancelEditor(); }
       else if (ev.key === 'Enter' && !ev.shiftKey) {
         const t = ev.target;
         if (t.tagName === 'BUTTON') { /* Enter on a button activates that button */ }
@@ -537,13 +551,28 @@
     return edit;
   }
 
-  function saveFromEditor() {
-    if (!editingId) return;
-    updateEdit(editingId, {
+  // Snapshot of the mark when the card opened, so Cancel can put it back.
+  let snapshot = null;
+  function fieldValues() {
+    return {
       replacement: shadow.querySelector('.repl').value,
       reason: shadow.querySelector('.reason').value,
       note: shadow.querySelector('.note').value,
-    });
+    };
+  }
+  function applyLive() {
+    if (!editingId) return;
+    updateEdit(editingId, fieldValues(), true);
+  }
+  // Save: changes are already applied; make sure they are persisted and close.
+  function saveFromEditor() {
+    if (!editingId) return;
+    updateEdit(editingId, fieldValues());
+    closeEditor();
+  }
+  // Cancel / Esc: revert to the state at open (including the kind) and close.
+  function cancelEditor() {
+    if (editingId && snapshot) updateEdit(editingId, snapshot);
     closeEditor();
   }
 
@@ -552,6 +581,7 @@
     const spans = delSpans(id);
     if (!edit || !spans.length || !settings.visible) return;
     ensureEditor();
+    if (editingId !== id) snapshot = { replacement: edit.replacement || '', reason: edit.reason || '', note: edit.note || '', kind: isNote(edit) ? 'note' : 'edit' };
     editingId = id;
     const note = isNote(edit);
     const card = shadow.querySelector('.card');
@@ -573,8 +603,10 @@
     shadow.querySelector(note ? '.note' : '.repl').focus();
   }
 
+  // Closing without Cancel (Save, Enter, clicking outside) keeps the live changes.
   function closeEditor() {
     editingId = null;
+    snapshot = null;
     if (host) host.style.display = 'none';
   }
 
