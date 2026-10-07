@@ -78,8 +78,21 @@ try {
       const body = await c.send('Runtime.evaluate', { expression: 'document.body.innerText.slice(0, 160).replace(/\\n+/g, " | ")', returnByValue: true });
       log(`${f}: errors=${JSON.stringify(errs)} text=${JSON.stringify(body.result?.result?.value)}`);
       if (f === 'pages.html') {
-        const imp = await c.send('Runtime.evaluate', { expression: `importFile(new File([JSON.stringify({ format: 'page-redline/1', pages: [{ url: 'https://example.test/doc', title: 'Imported doc', edits: [{ id: 'imp1', exact: 'foo', prefix: '', suffix: '', replacement: 'bar', reason: 'zzz', note: '', createdAt: 1 }] }], settings: { reasons: [{ id: 'zzz', label: 'Imported reason', color: '#112233' }] } })], 'x.json')).then(() => document.getElementById('stats').textContent + ' / ' + document.getElementById('flash').textContent)`, awaitPromise: true, returnByValue: true });
-        log('  import:', JSON.stringify(imp.result?.result?.value ?? imp.result?.exceptionDetails?.text));
+        // local state: 'unclear' renamed to 'Vague' (customized); 'verbose' untouched default
+        await c.send('Runtime.evaluate', { expression: `chrome.storage.local.get('settings').then(r => { const s = PageRedlineShared.normalizeSettings(r.settings); s.reasons.find(x => x.id === 'unclear').label = 'Vague'; return chrome.storage.local.set({ settings: s }); })`, awaitPromise: true });
+        const imp = await c.send('Runtime.evaluate', { expression: `importFile(new File([JSON.stringify({ format: 'page-redline/1', pages: [{ url: 'https://example.test/doc', title: 'Imported doc', edits: [
+            { id: 'imp1', exact: 'a', prefix: '', suffix: '', replacement: '', reason: 'zzz', note: '', createdAt: 1 },
+            { id: 'imp2', exact: 'b', prefix: '', suffix: '', replacement: '', reason: 'verbose', note: '', createdAt: 1 },
+            { id: 'imp3', exact: 'c', prefix: '', suffix: '', replacement: '', reason: 'unclear', note: '', createdAt: 1 } ] }],
+          settings: { reasons: [ { id: 'zzz', label: 'Imported reason', color: '#112233' }, { id: 'verbose', label: 'AI slop', color: '#5d4037' }, { id: 'unclear', label: 'Confusing', color: '#ef6c00' } ] } })], 'x.json'))
+          .then(() => chrome.storage.local.get(null)).then(all => { const s = PageRedlineShared.normalizeSettings(all.settings); const edits = all['page:https://example.test/doc']; const by = (id) => edits.find(e => e.id === id); const label = (rid) => (s.reasons.find(r => r.id === rid) || {}).label; return JSON.stringify({ flash: document.getElementById('flash').textContent, imp1: label(by('imp1').reason), imp2: label(by('imp2').reason), imp3: label(by('imp3').reason), unclearStillVague: label('unclear'), reasons: s.reasons.length }); })`, awaitPromise: true, returnByValue: true });
+        log('  import (expect imp1=Imported reason, imp2=AI slop via adopted default, imp3=Confusing via new id, unclear stays Vague):', JSON.stringify(imp.result?.result?.value ?? imp.result?.exceptionDetails?.text));
+      }
+      if (f === 'popup.html') {
+        // point the popup at the demo tab, change the first edit's reason via the dropdown, check the page
+        const r = await c.send('Runtime.evaluate', { expression: `tabId = ${tabIdExpr}; refresh().then(() => { const sel = document.querySelector('li .meta select'); sel.value = 'unclear'; sel.dispatchEvent(new Event('change', { bubbles: true })); return new Promise(res => setTimeout(() => res(sel.value), 400)); })`, awaitPromise: true, returnByValue: true });
+        log('  popup dropdown set to:', JSON.stringify(r.result?.result?.value ?? r.result?.exceptionDetails?.text));
+        log('  page mark color now:', await pev(`[...document.querySelectorAll('.page-redline-del')].map(d => d.style.getPropertyValue('--pr-color')).join(',')`));
       }
       if (f === 'popup.html') log('  openOptionsPage:', JSON.stringify((await c.send('Runtime.evaluate', { expression: 'chrome.runtime.openOptionsPage().then(() => "ok", e => "ERR " + e.message)', awaitPromise: true, returnByValue: true })).result?.result?.value));
       c.close();

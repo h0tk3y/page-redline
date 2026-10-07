@@ -50,8 +50,10 @@ changes, such as a site's theme toggle or Dark Reader darkening the page after i
 - **All pages in one place.** *All pages…* in the popup opens a screen listing every page
   that has edits, newest first, with its edits, an *Open page* button and per-page Markdown
   copy and delete. From there you can **export everything** to a JSON file (edits plus your
-  reasons and colors), **import** such a file on another machine (merged by edit id, so
-  re-importing is harmless), or **clear all edits** on all pages.
+  reasons and colors), **import** such a file on another machine, or **clear all edits** on all
+  pages. Import merges: edits by id, so re-importing is harmless; reasons by id and label, so a
+  reason you renamed on one machine keeps its name on the other, and a true collision (the same
+  id customized differently on both sides) is imported as a separate reason.
 - **Your own reasons and colors.** The settings page lets you rename, recolor, reorder, add
   and remove reasons, and choose the replacement color (green by default), with a live
   preview.

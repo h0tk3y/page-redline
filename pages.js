@@ -115,36 +115,56 @@ function exportAll() {
   flash(`Exported ${data.pages.reduce((n, p) => n + p.edits.length, 0)} edits from ${data.pages.length} pages.`);
 }
 
-// Merge: edits are matched by id, so re-importing the same file changes nothing.
-// Reasons missing locally are added so imported edits keep their labels and colors.
+// Merge. Reasons first: an incoming reason with an unknown id is added; one with a known id and
+// the same label is the same reason; one with a known id but a different label is a collision
+// (e.g. a built-in renamed on one machine) - if the local reason is still the untouched default
+// it adopts the incoming definition, otherwise the incoming reason gets a fresh id and the
+// imported edits are remapped to it. Edits are matched by id, so re-importing changes nothing.
 async function importFile(file) {
   let data;
   try { data = JSON.parse(await file.text()); } catch { flash('That file is not valid JSON.'); return; }
   if (!data || data.format !== shared.EXPORT_FORMAT || !Array.isArray(data.pages)) { flash('That file is not a Page Redline export.'); return; }
   const all = await api.storage.local.get(null);
+  settings = shared.normalizeSettings(all[shared.SETTINGS_KEY]);
   const updates = {};
+  const idMap = new Map(); // incoming reason id -> local reason id, when they differ
+  let reasonsAdded = 0, reasonsUpdated = 0;
+  const sameLabel = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+  const isPristineDefault = (r) => shared.DEFAULT_REASONS.some((d) => d.id === r.id && d.label === r.label && d.color === r.color);
+  if (data.settings && Array.isArray(data.settings.reasons)) {
+    const incoming = shared.normalizeSettings({ reasons: data.settings.reasons }).reasons;
+    for (const r of incoming) {
+      const local = settings.reasons.find((x) => x.id === r.id);
+      if (!local) { settings.reasons.push({ ...r }); reasonsAdded++; continue; }
+      if (sameLabel(local.label, r.label)) continue;
+      if (isPristineDefault(local)) { local.label = r.label; local.color = r.color; reasonsUpdated++; continue; }
+      const byLabel = settings.reasons.find((x) => sameLabel(x.label, r.label));
+      if (byLabel) { idMap.set(r.id, byLabel.id); continue; }
+      const fresh = { id: shared.newReasonId(), label: r.label, color: r.color };
+      settings.reasons.push(fresh); idMap.set(r.id, fresh.id); reasonsAdded++;
+    }
+    if (reasonsAdded || reasonsUpdated) updates[shared.SETTINGS_KEY] = settings;
+  }
   let added = 0, pagesTouched = 0;
   for (const p of data.pages) {
     if (!p || typeof p.url !== 'string' || !Array.isArray(p.edits)) continue;
     const key = shared.PAGE_PREFIX + p.url;
     const existing = Array.isArray(all[key]) ? all[key] : [];
     const have = new Set(existing.map((e) => e.id));
-    const fresh = p.edits.filter((e) => e && typeof e.id === 'string' && typeof e.exact === 'string' && !have.has(e.id));
+    const fresh = p.edits
+      .filter((e) => e && typeof e.id === 'string' && typeof e.exact === 'string' && !have.has(e.id))
+      .map((e) => (idMap.has(e.reason) ? { ...e, reason: idMap.get(e.reason) } : e));
     if (!fresh.length) continue;
     updates[key] = existing.concat(fresh);
     const meta = all[shared.META_PREFIX + p.url] || {};
     updates[shared.META_PREFIX + p.url] = { title: meta.title || p.title || '', updatedAt: Math.max(meta.updatedAt || 0, p.updatedAt || 0, Date.now()) };
     added += fresh.length; pagesTouched++;
   }
-  let reasonsAdded = 0;
-  if (data.settings && Array.isArray(data.settings.reasons)) {
-    const incoming = shared.normalizeSettings({ reasons: data.settings.reasons }).reasons;
-    const have = new Set(settings.reasons.map((r) => r.id));
-    const missing = incoming.filter((r) => !have.has(r.id));
-    if (missing.length) { settings.reasons = settings.reasons.concat(missing); updates[shared.SETTINGS_KEY] = settings; reasonsAdded = missing.length; }
-  }
   if (Object.keys(updates).length) await api.storage.local.set(updates);
-  flash(`Imported ${added} new edit${added === 1 ? '' : 's'} on ${pagesTouched} page${pagesTouched === 1 ? '' : 's'}${reasonsAdded ? `, added ${reasonsAdded} reason${reasonsAdded === 1 ? '' : 's'}` : ''}.`);
+  const parts = [`Imported ${added} new edit${added === 1 ? '' : 's'} on ${pagesTouched} page${pagesTouched === 1 ? '' : 's'}`];
+  if (reasonsAdded) parts.push(`added ${reasonsAdded} reason${reasonsAdded === 1 ? '' : 's'}`);
+  if (reasonsUpdated) parts.push(`updated ${reasonsUpdated} reason${reasonsUpdated === 1 ? '' : 's'}`);
+  flash(parts.join(', ') + '.');
   await load();
 }
 
