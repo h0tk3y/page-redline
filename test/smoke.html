@@ -210,6 +210,7 @@
   // the editor opens in note mode with the note's own text, not a stale one
   await __send({ type: 'pr:open-editor', id: noteId });
   const sh = document.getElementById('page-redline-host').shadowRoot;
+  { const nb = sh.querySelector('.note-block'), rb = sh.querySelector('.reason-block'); ok('note mode: note block precedes reason block in DOM (tab order matches layout)', !!(nb.compareDocumentPosition(rb) & Node.DOCUMENT_POSITION_FOLLOWING)); }
   ok('editor note mode shows this note', sh.querySelector('.card').classList.contains('note-mode') && sh.querySelector('textarea.note').value === 'Needs a citation' && sh.activeElement === sh.querySelector('textarea.note'));
   sh.querySelector('.cancel').click();
   ok('note survives reload as a note', document.querySelector(`.page-redline-note[data-pr-id="${noteId}"]`)?.textContent === 'The');
@@ -222,6 +223,7 @@
   r = await __send({ type: 'pr:mark-selection', kind: 'edit' });
   const tId = r.edit.id;
   ok('shortcut creates an edit and opens the card', r.ok && r.edit.kind === 'edit' && document.getElementById('page-redline-host').style.display === 'block');
+  { const nb = sh.querySelector('.note-block'), rb = sh.querySelector('.reason-block'); ok('edit mode: reason block precedes note block again', !!(rb.compareDocumentPosition(nb) & Node.DOCUMENT_POSITION_FOLLOWING)); }
   ok('selected free text while the card is open', selText(p2, 'more words'));
   r = await __send({ type: 'pr:mark-selection', kind: 'note' });
   ok('second shortcut with the card open creates a new mark, does not flip the first', r.ok && !r.toggled && r.edit.exact === 'more words' && r.edit.kind === 'note' && document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));

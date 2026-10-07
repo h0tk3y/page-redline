@@ -439,9 +439,6 @@
         .card.note-mode .orig { color: inherit; text-decoration: none; background: color-mix(in srgb, var(--note-color, #f9a825) 30%, transparent); border-radius: 3px; padding: 0 2px; }
         .card.note-mode .repl-block { display: none; }
         .card { display: flex; flex-direction: column; }
-        .card.note-mode .orig { order: -2; }
-        .card.note-mode .note-block { order: -1; }
-        .card.note-mode .reason-block { order: 0; }
         .note-block textarea { min-height: 36px; }
         .card.note-mode .note-block textarea { min-height: 60px; }
         .convert { margin-top: 8px; font-size: 11px; color: #6e6e73; }
@@ -586,6 +583,10 @@
     const note = isNote(edit);
     const card = shadow.querySelector('.card');
     card.classList.toggle('note-mode', note);
+    // Note mode shows the note above the reason. Reorder the DOM (not CSS order) so the tab
+    // order matches what is on screen.
+    const noteBlock = shadow.querySelector('.note-block'), reasonBlock = shadow.querySelector('.reason-block');
+    if (note) reasonBlock.before(noteBlock); else reasonBlock.after(noteBlock);
     shadow.querySelector('.note').placeholder = note ? '' : 'Optional';
     shadow.querySelector('.convert-link').textContent = note ? 'Strike through instead' : 'Note only';
     shadow.querySelector('.orig').textContent = edit.exact;
