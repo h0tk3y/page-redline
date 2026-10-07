@@ -503,7 +503,9 @@
     shadow.querySelector('.remove').addEventListener('click', () => { if (editingId) removeEdit(editingId); });
     shadow.querySelector('.convert-link').addEventListener('click', convertOpenEdit);
     shadow.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Escape') { ev.preventDefault(); cancelEditor(); }
+      // Esc is two-step, like Vimium's: the first press leaves the focused field (the card stays
+      // open), the second press, with nothing in the card focused, cancels and closes it.
+      if (ev.key === 'Escape') { ev.preventDefault(); if (shadow.activeElement) shadow.activeElement.blur(); else cancelEditor(); }
       else if (ev.key === 'Enter' && !ev.shiftKey) {
         const t = ev.target;
         if (t.tagName === 'BUTTON') { /* Enter on a button (incl. the convert link) activates it natively */ }
@@ -512,16 +514,15 @@
       ev.stopPropagation();
     });
     shadow.addEventListener('keyup', (ev) => ev.stopPropagation());
-    // Keyboard-driven extensions (Vimium) handle Esc in text fields themselves by blurring the
-    // field, and stop the event before it reaches us. Focus leaving the card to nothing, while
-    // the window keeps focus and no pointer is involved, is that case: treat it as Cancel.
-    shadow.addEventListener('focusout', (ev) => {
-      if (rebuilding) return; // the card is hiding/moving its own fields while (re)opening
-      if (!editingId || ev.relatedTarget) return; // focus moved to another element: not Esc
-      if (!document.hasFocus()) return; // window lost focus (app switch): keep the card
-      if (Date.now() - lastPointerDown < 500) return; // a click elsewhere: the click handler decides
+    // Second Esc: focus is no longer inside the card (Vimium blurs the field on the first Esc and
+    // swallows that key; without Vimium the handler above does the same), so listen on the
+    // document for the press that closes the card.
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Escape' || !editingId || shadow.activeElement) return;
+      const path = ev.composedPath ? ev.composedPath() : [];
+      if (path.includes(host)) return; // handled by the card's own listener
       cancelEditor();
-    });
+    }, true);
     shadow.addEventListener('keypress', (ev) => ev.stopPropagation());
     (document.body || document.documentElement).appendChild(host);
   }
@@ -650,9 +651,6 @@
     setHover(mark ? mark.dataset.prId : null);
   }, true);
   document.addEventListener('mouseleave', () => setHover(null), true);
-
-  let lastPointerDown = 0;
-  document.addEventListener('pointerdown', () => { lastPointerDown = Date.now(); }, true);
 
   // ---------- page events ----------
   document.addEventListener('contextmenu', () => {

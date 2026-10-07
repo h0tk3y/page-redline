@@ -218,6 +218,7 @@
 
   // 14. shortcuts never flip the open mark: with the card open they create a new mark from the selection
   const selText = (root, phrase) => { const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const i = n.data.indexOf(phrase); if (i >= 0 && !n.parentElement.closest('.page-redline-del,.page-redline-note,.page-redline-ins')) { sel(n, i, n, i + phrase.length); return true; } } return false; };
+  const key = (el, k, extra = {}) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, composed: true, cancelable: true, ...extra }));
   await __send({ type: 'pr:remove', id: noteId });
   ok('selected free text for the shortcut test', selText(p1, 'lazy dog'));
   r = await __send({ type: 'pr:mark-selection', kind: 'edit' });
@@ -246,18 +247,22 @@
   ok('convert link flips the open mark to a note', document.querySelector(`.page-redline-note[data-pr-id="${tId}"]`) && sh.querySelector('.card').classList.contains('note-mode'));
   sh.querySelector('.convert-link').click();
   ok('convert link flips it back', document.querySelector(`.page-redline-del[data-pr-id="${tId}"]`));
-  // Esc swallowed by a keyboard extension shows up as the field blurring to nothing
-  if (document.hasFocus()) {
-    await __send({ type: 'pr:open-editor', id: tId });
-    sh.querySelector('.repl').value = 'blurred away'; sh.querySelector('.repl').dispatchEvent(new Event('input', { bubbles: true }));
-    sh.querySelector('.repl').blur();
-    ok('focus leaving the card to nothing (Vimium Esc) cancels and closes', document.getElementById('page-redline-host').style.display === 'none' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).replacement !== 'blurred away');
-  } else {
-    ok('focus-loss cancel test skipped: document not focused in this harness', true);
-  }
+  // Two-step Esc: first press leaves the field (card stays open), second press cancels and closes
+  await __send({ type: 'pr:open-editor', id: tId });
+  sh.querySelector('.repl').value = 'two-step'; sh.querySelector('.repl').dispatchEvent(new Event('input', { bubbles: true }));
+  key(sh.querySelector('.repl'), 'Escape');
+  ok('first Esc blurs the field and keeps the card open', document.getElementById('page-redline-host').style.display === 'block' && !sh.activeElement);
+  document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  ok('second Esc (focus outside the card) cancels and closes', document.getElementById('page-redline-host').style.display === 'none' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).replacement !== 'two-step');
+  // Vimium path: the field is blurred by the extension (no key reaches the card), then Esc arrives at the document
+  await __send({ type: 'pr:open-editor', id: tId });
+  sh.querySelector('.repl').value = 'vimium'; sh.querySelector('.repl').dispatchEvent(new Event('input', { bubbles: true }));
+  sh.querySelector('.repl').blur();
+  ok('a blur alone keeps the card open', document.getElementById('page-redline-host').style.display === 'block');
+  document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  ok('Esc after the blur cancels and closes', document.getElementById('page-redline-host').style.display === 'none' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).replacement !== 'vimium');
 
   // 14b. Enter saves from the reason select and the note field; Enter on a button does not save
-  const key = (el, k, extra = {}) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, composed: true, cancelable: true, ...extra }));
   await __send({ type: 'pr:open-editor', id: tId });
   sh.querySelector('.reason').value = '';
   sh.querySelector('textarea.note').value = 'saved via select';
@@ -295,8 +300,8 @@
   ok('clicking outside keeps the live changes', document.getElementById('page-redline-host').style.display === 'none' && (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).replacement === 'kept');
   await __send({ type: 'pr:open-editor', id: tId });
   sh.querySelector('.repl').value = 'esc drops this'; sh.querySelector('.repl').dispatchEvent(new Event('input', { bubbles: true }));
-  key(sh.querySelector('.repl'), 'Escape');
-  ok('Esc reverts like Cancel', (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).replacement === 'kept');
+  key(sh.querySelector('.repl'), 'Escape'); document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  ok('Esc twice reverts like Cancel', (await __send({ type: 'pr:list' })).edits.find(e => e.id === tId).replacement === 'kept');
   await __send({ type: 'pr:update', id: tId, patch: { replacement: '' } });
 
   // 15. hovering any piece of a multi-span mark highlights every piece

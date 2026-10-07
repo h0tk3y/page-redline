@@ -108,8 +108,9 @@ to be signed through addons.mozilla.org (free, "unlisted" self-distribution); th
    under *Manage Extension Shortcuts* on the add-ons page.
 2. In the card that opens, type the replacement or the note and pick a reason. Everything
    applies to the page as you type or pick, and is saved as you go. An empty replacement keeps
-   just the strikethrough. **Enter** or **Save** closes the card; **Esc** or **Cancel** puts the
-   mark back the way it was when the card opened; clicking outside keeps your changes.
+   just the strikethrough. **Enter** or **Save** closes the card. **Cancel** puts the mark back the
+   way it was when the card opened; so does **Esc** pressed twice: the first press leaves the
+   field, the second closes the card. Clicking outside keeps your changes.
 3. Click any mark, or the ✎ badge after it, at any time to edit or remove it.
 4. Open the toolbar popup for the full list. Click an edit's text to jump to it on the
    page; use **Copy Markdown** to paste the list into an issue or a message:
