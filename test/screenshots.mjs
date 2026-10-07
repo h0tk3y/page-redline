@@ -78,6 +78,14 @@ try {
   await popup.evaluate(`tabId = ${tabId}; refresh()`); await sleep(500);
   await popup.shot('popup.png', 380, 470);
   popup.close();
+  // store listing captures: 1280x800 at 1x (Chrome Web Store / AMO screenshot size)
+  const STORE = path.join(EXT, 'dist', 'store');
+  fs.mkdirSync(STORE, { recursive: true });
+  const storeShot = async (conn, file, w = 1280, h = 800) => { await conn.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false }); await sleep(300); const r = await conn.send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(STORE, file), Buffer.from(r.result.data, 'base64')); console.log('wrote store/' + file); };
+  await storeShot(page, '1-marks.png');
+  await msg({ type: 'pr:open-editor', id: dupId }); await sleep(400);
+  await storeShot(page, '2-editor.png');
+  await page.evaluate('document.getElementById("page-redline-host")?.style.setProperty("display","none")');
   // the same marks on a dark page: colors are lightened automatically
   await page.send('Page.navigate', { url: 'file://' + path.join(EXT, 'test', 'demo-dark.html') });
   await sleep(1200);
@@ -94,6 +102,7 @@ try {
   await dmark('it contributes a schema that describes the software types', { note: 'Link to the schema page.', reason: 'other' }, 'note');
   await page.evaluate('document.getElementById("page-redline-host")?.style.setProperty("display","none")');
   await page.shot('page-marks-dark.png', 1000, 620);
+  await storeShot(page, '3-dark.png');
   // all-pages screen
   const at = await http(`/json/new?chrome-extension://${extId}/pages.html`, { method: 'PUT' });
   const allp = await connect(at.webSocketDebuggerUrl);
@@ -101,6 +110,7 @@ try {
   await allp.evaluate('document.querySelector("details").open = true');
   await sleep(200);
   await allp.shot('all-pages.png', 900, 560);
+  await storeShot(allp, '4-all-pages.png');
   allp.close();
   // options page
   const ot = await http(`/json/new?chrome-extension://${extId}/options.html`, { method: 'PUT' });

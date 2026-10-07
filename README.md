@@ -140,6 +140,19 @@ along with each page's URL and title. The extension makes no network requests; t
 data leaves the browser is the export file you download yourself. It asks for access to all sites so that the
 context-menu entry works on any page.
 
+## Releasing
+
+```
+node scripts/package.mjs          # dist/page-redline-<version>-chrome.zip and -firefox.zip
+npx web-ext lint --source-dir .   # Firefox manifest validation
+CHROME_BIN=... node test/screenshots.mjs   # also writes 1280x800 store captures to dist/store/
+```
+
+Each zip carries a manifest trimmed to its browser (Chrome: service worker only, no Firefox
+keys; Firefox: event-page scripts only). Bump `version` in `manifest.json` before packaging;
+both stores require a higher version for every upload. `PRIVACY.md` is the privacy policy both
+store listings link to.
+
 ## Development
 
 Plain JavaScript, no build step.

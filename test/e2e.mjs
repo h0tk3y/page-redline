@@ -9,9 +9,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const CHROME = process.env.CHROME_BIN;
 if (!CHROME) { console.error('Set CHROME_BIN to a Chrome for Testing / Chromium binary.'); process.exit(2); }
-const EXT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const EXT = process.env.EXT_DIR ? path.resolve(process.env.EXT_DIR) : REPO; // e.g. an unzipped store build
 const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'page-redline-e2e-'));
-const FIXTURE = path.join(EXT, 'test', 'plain.html');
+const FIXTURE = path.join(REPO, 'test', 'plain.html');
 const PORT = 9333;
 const chrome = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
   `--remote-debugging-port=${PORT}`, `--user-data-dir=${PROFILE}`, `--load-extension=${EXT}`, `--disable-extensions-except=${EXT}`,
