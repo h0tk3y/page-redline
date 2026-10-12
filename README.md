@@ -79,7 +79,6 @@ download it as a zip and unpack it, then load it unpacked.
 git clone https://github.com/h0tk3y/page-redline.git
 ```
 
-
 1. Open `chrome://extensions` (`edge://extensions`, `brave://extensions`).
 2. Turn on **Developer mode** (top right).
 3. Click **Load unpacked** and pick the `page-redline` folder.
