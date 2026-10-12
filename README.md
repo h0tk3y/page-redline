@@ -63,14 +63,22 @@ stays in the browser's extension storage.
 
 ## Installation
 
-Page Redline is not in the extension stores yet, so it is installed from this repository.
-Clone it or download it as a zip and unpack it:
+### Firefox
+
+Install it from Firefox Add-ons: **https://addons.mozilla.org/en-US/firefox/addon/page-redline/**
+
+After installing, click the Page Redline toolbar icon, open **Permissions**, and allow access
+to the sites you want to edit; Firefox does not grant site access to extensions by default.
+
+### Chrome, Edge, Brave and other Chromium browsers
+
+A Chrome Web Store listing is coming. Until then, install from this repository: clone it or
+download it as a zip and unpack it, then load it unpacked.
 
 ```
 git clone https://github.com/h0tk3y/page-redline.git
 ```
 
-### Chrome, Edge, Brave and other Chromium browsers
 
 1. Open `chrome://extensions` (`edge://extensions`, `brave://extensions`).
 2. Turn on **Developer mode** (top right).
@@ -80,17 +88,11 @@ The browser will remind you about developer-mode extensions on startup; that is 
 an extension installed outside the store. To update, `git pull` and click the extension's
 reload button on the same page.
 
-### Firefox
+### Firefox from source (development)
 
-1. Open `about:debugging#/runtime/this-firefox`.
-2. Click **Load Temporary Add-on…** and pick `manifest.json` inside the folder.
-3. Click the Page Redline toolbar icon, open **Permissions**, and allow access to the sites
-   you want to edit. Firefox does not grant site access to extensions by default. Reload the
-   page afterwards.
-
-A temporary add-on is removed when Firefox quits. For a permanent install, the extension has
-to be signed through addons.mozilla.org (free, "unlisted" self-distribution); the resulting
-`.xpi` can then be installed by opening it in Firefox.
+Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and pick
+`manifest.json` inside the folder, then grant site access as above. A temporary add-on is
+removed when Firefox quits; use the store version for everyday use.
 
 ## Using it
 
