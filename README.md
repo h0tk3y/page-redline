@@ -8,6 +8,16 @@ remembered per page and listed in the toolbar popup, ready to hand to whoever ed
 Works in Chrome (and Chromium-based browsers) and Firefox. No account, no server: all data
 stays in the browser's extension storage.
 
+## Get it
+
+<a href="https://addons.mozilla.org/en-US/firefox/addon/page-redline/"><img src="https://blog.mozilla.org/addons/files/2020/04/get-the-addon-fx-apr-2020.svg" alt="Get Page Redline for Firefox" height="60"></a>
+
+[![Firefox Add-on version](https://img.shields.io/amo/v/page-redline)](https://addons.mozilla.org/en-US/firefox/addon/page-redline/)
+[![Firefox Add-on users](https://img.shields.io/amo/users/page-redline)](https://addons.mozilla.org/en-US/firefox/addon/page-redline/)
+
+**Firefox:** https://addons.mozilla.org/en-US/firefox/addon/page-redline/
+**Chrome:** Chrome Web Store listing coming; [install from source](#chrome-edge-brave-and-other-chromium-browsers) for now.
+
 ![A documentation page with four marked edits: struck-through phrases in reason colors, each followed by its green replacement](docs/page-marks.png)
 
 ## Features
@@ -65,8 +75,7 @@ stays in the browser's extension storage.
 
 ### Firefox
 
-Install it from Firefox Add-ons: **https://addons.mozilla.org/en-US/firefox/addon/page-redline/**
-
+Install it from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/page-redline/).
 After installing, click the Page Redline toolbar icon, open **Permissions**, and allow access
 to the sites you want to edit; Firefox does not grant site access to extensions by default.
 
